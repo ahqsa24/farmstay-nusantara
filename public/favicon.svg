@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Background circular badge in Farm Green -->
+  <circle cx="256" cy="256" r="236" fill="#1E5E3A" />
+  
+  <!-- Accent inner ring in Farm Gold -->
+  <circle cx="256" cy="256" r="216" fill="none" stroke="#C4A46A" stroke-width="8" opacity="0.5" />
+  
+  <!-- Brand Icon: Golden Leaf with Cabin Cutout -->
+  <path d="M256,110 C180,110 150,185 190,265 C220,325 256,365 256,365 C256,365 292,325 322,265 C362,185 332,110 256,110 Z" fill="#C4A46A" />
+  
+  <!-- Cabin Cutout (matching background green) -->
+  <path d="M256,185 L200,241 L216,241 L216,305 L296,305 L296,241 L312,241 Z" fill="#1E5E3A" />
+  
+  <!-- Door Cutout (matching leaf gold) -->
+  <rect x="244" y="265" width="24" height="40" rx="4" fill="#C4A46A" />
+</svg>

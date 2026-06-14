@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import Head from "next/head";
 import { Playfair_Display } from "next/font/google";
 import { useTranslation } from "@/hooks/useTranslation";
 import ScrollReveal from "@/components/ScrollReveal";
@@ -45,6 +46,13 @@ export default function Home() {
     <div
       className={`${playfair.variable} font-sans bg-farm-beige text-farm-text min-h-screen selection:bg-farm-green selection:text-white`}
     >
+      <Head>
+        <title>
+          {locale === "id"
+            ? "Farmstay Nusantara — Gerbang Eco-Agrowisata Berkelanjutan"
+            : "Farmstay Nusantara — Gateway to Eco-Agritourism"}
+        </title>
+      </Head>
       {/* 1. Header/Navbar */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-farm-beige/90 border-b border-farm-border/50 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">

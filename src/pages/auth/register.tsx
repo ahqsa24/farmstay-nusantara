@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useMultiStepForm } from "@/hooks/useMultiStepForm";
@@ -282,6 +283,11 @@ export default function Register() {
 
   return (
     <GuestGuard>
+      <Head>
+        <title>
+          {locale === "id" ? "Daftar — Farmstay Nusantara" : "Register — Farmstay Nusantara"}
+        </title>
+      </Head>
       <div className="min-h-screen bg-farm-beige font-sans flex flex-col md:flex-row">
         {/* Success Toast Overlays */}
         {success && (

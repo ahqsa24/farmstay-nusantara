@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { complianceService } from "@/services/complianceService";
@@ -529,6 +530,13 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
+      <Head>
+        <title>
+          {locale === "id"
+            ? `${user?.role === "owner" ? "Dashboard Pemilik" : "Jelajah"} — Farmstay Nusantara`
+            : `${user?.role === "owner" ? "Owner Dashboard" : "Explore"} — Farmstay Nusantara`}
+        </title>
+      </Head>
       {user?.role === "owner" ? renderOwnerContent() : renderVisitorContent()}
     </DashboardLayout>
   );

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "@/hooks/useTranslation";
 import GuestGuard from "@/components/guards/GuestGuard";
@@ -56,6 +57,11 @@ export default function Login() {
 
   return (
     <GuestGuard>
+      <Head>
+        <title>
+          {locale === "id" ? "Masuk — Farmstay Nusantara" : "Login — Farmstay Nusantara"}
+        </title>
+      </Head>
       <div className="min-h-screen bg-farm-beige font-sans flex flex-col md:flex-row">
         {/* Left Side: Solid Brand Panel (Gambar 1 style) */}
         <div className="hidden md:flex md:w-[38%] bg-gradient-to-br from-farm-green to-farm-green-dark text-white p-12 flex-col justify-between shrink-0 sticky top-0 h-screen select-none border-r border-farm-border">
