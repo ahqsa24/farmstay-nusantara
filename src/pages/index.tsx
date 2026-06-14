@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Head from "next/head";
 import { Playfair_Display } from "next/font/google";
 import { useTranslation } from "@/hooks/useTranslation";
 import ScrollReveal from "@/components/ScrollReveal";
+import SplashLoader from "@/components/SplashLoader";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -14,6 +15,19 @@ const playfair = Playfair_Display({
 export default function Home() {
   const { t, locale, router } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const hasSeen = sessionStorage.getItem("hasSeenSplash");
+    if (hasSeen) {
+      setShowSplash(false);
+    }
+  }, []);
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem("hasSeenSplash", "true");
+    setShowSplash(false);
+  };
 
   const changeLanguage = (newLocale: "en" | "id") => {
     router.push(router.asPath, router.asPath, { locale: newLocale, scroll: false });
@@ -43,10 +57,12 @@ export default function Home() {
   ];
 
   return (
-    <div
-      className={`${playfair.variable} font-sans bg-farm-beige text-farm-text min-h-screen selection:bg-farm-green selection:text-white`}
-    >
-      <Head>
+    <>
+      {showSplash && <SplashLoader onComplete={handleSplashComplete} />}
+      <div
+        className={`${playfair.variable} font-sans bg-farm-beige text-farm-text min-h-screen selection:bg-farm-green selection:text-white`}
+      >
+        <Head>
         <title>
           {locale === "id"
             ? "Farmstay Nusantara — Gerbang Eco-Agrowisata Berkelanjutan"
@@ -435,6 +451,7 @@ export default function Home() {
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   );
 }
