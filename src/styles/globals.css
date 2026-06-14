@@ -1,0 +1,34 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  --background: #F5F2EB;
+  --foreground: #1E2522;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Satoshi", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --font-mono: var(--font-geist-mono);
+  
+  --color-farm-beige: #F5F2EB;
+  --color-farm-cream: #FBF9F6;
+  --color-farm-green: #1E5E3A;
+  --color-farm-green-hover: #2B784E;
+  --color-farm-green-dark: #172E22;
+  --color-farm-green-light: #E8F3EC;
+  --color-farm-gold: #C4A46A;
+  --color-farm-gold-hover: #B39359;
+  --color-farm-border: #D2CFC9;
+  --color-farm-text: #1E2522;
+  --color-farm-text-light: #5A6560;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Satoshi", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
