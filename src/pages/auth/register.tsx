@@ -14,6 +14,8 @@ const initialOwnerValues = {
   email: "",
   password: "",
   password_confirmation: "",
+  nomor_hp: "",
+  alamat: "",
   nama_akomodasi: "",
   tipe_akomodasi: "",
   rating_bintang: "",
@@ -173,6 +175,8 @@ export default function Register() {
       if (data.password !== data.password_confirmation) {
         errors.password_confirmation = t.common.validationPasswordMatch;
       }
+      if (!data.nomor_hp) errors.nomor_hp = t.common.validationRequired;
+      if (!data.alamat) errors.alamat = t.common.validationRequired;
     } else if (step === 2) {
       if (!data.nama_akomodasi) errors.nama_akomodasi = t.common.validationRequired;
       if (!data.tipe_akomodasi) errors.tipe_akomodasi = t.common.validationRequired;
@@ -220,7 +224,15 @@ export default function Register() {
         }, 2500);
       }
     } catch (err: any) {
-      setGeneralError(err.response?.data?.message || t.common.errorOccurred);
+      const data = err.response?.data;
+      if (data?.errors) {
+        const details = Object.entries(data.errors)
+          .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(", ")}`)
+          .join("; ");
+        setGeneralError(`${data.message || t.common.errorOccurred} (${details})`);
+      } else {
+        setGeneralError(data?.message || t.common.errorOccurred);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -252,6 +264,8 @@ export default function Register() {
         password_confirmation: data.password_confirmation,
         role: "owner" as const,
         step_data: {
+          nomor_hp: data.nomor_hp,
+          alamat: data.alamat,
           nama_akomodasi: data.nama_akomodasi,
           tipe_akomodasi: data.tipe_akomodasi,
           rating_bintang: data.rating_bintang,
@@ -275,7 +289,15 @@ export default function Register() {
         }, 2500);
       }
     } catch (err: any) {
-      setGeneralError(err.response?.data?.message || t.common.errorOccurred);
+      const data = err.response?.data;
+      if (data?.errors) {
+        const details = Object.entries(data.errors)
+          .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(", ")}`)
+          .join("; ");
+        setGeneralError(`${data.message || t.common.errorOccurred} (${details})`);
+      } else {
+        setGeneralError(data?.message || t.common.errorOccurred);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -632,6 +654,30 @@ export default function Register() {
                         onChange={(e) => ownerForm.updateFormData({ password_confirmation: e.target.value })}
                       />
                       {validationErrors.password_confirmation && <span className="text-[10px] text-red-500 font-semibold">{validationErrors.password_confirmation}</span>}
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-farm-text">{t.common.phoneNumber}</label>
+                      <input
+                        type="text"
+                        disabled={isLoading || success}
+                        className="mt-1.5 block w-full px-4 h-11 border border-farm-border rounded-lg bg-farm-cream focus:outline-none focus:ring-1 focus:ring-farm-green text-xs sm:text-sm text-farm-text"
+                        value={ownerForm.formData.nomor_hp}
+                        onChange={(e) => ownerForm.updateFormData({ nomor_hp: e.target.value })}
+                      />
+                      {validationErrors.nomor_hp && <span className="text-[10px] text-red-500 font-semibold">{validationErrors.nomor_hp}</span>}
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-farm-text">{t.common.address}</label>
+                      <textarea
+                        rows={3}
+                        disabled={isLoading || success}
+                        className="mt-1.5 block w-full p-3.5 border border-farm-border rounded-lg bg-farm-cream focus:outline-none focus:ring-1 focus:ring-farm-green text-xs sm:text-sm text-farm-text"
+                        value={ownerForm.formData.alamat}
+                        onChange={(e) => ownerForm.updateFormData({ alamat: e.target.value })}
+                      />
+                      {validationErrors.alamat && <span className="text-[10px] text-red-500 font-semibold">{validationErrors.alamat}</span>}
                     </div>
                   </div>
                 )}

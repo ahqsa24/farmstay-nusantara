@@ -54,6 +54,17 @@ export default function NewStoryPage() {
     },
   }[locale === "id" ? "id" : "en"];
 
+  const getErrorMessage = (err: any, fallback: string) => {
+    const data = err.response?.data;
+    if (data?.errors) {
+      const details = Object.entries(data.errors)
+        .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(", ")}`)
+        .join("; ");
+      return `${data.message || fallback} (${details})`;
+    }
+    return data?.message || fallback;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -96,7 +107,7 @@ export default function NewStoryPage() {
         setErrorMsg(response.message || t.common.errorOccurred);
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || t.common.errorOccurred);
+      setErrorMsg(getErrorMessage(err, t.common.errorOccurred));
     } finally {
       setIsLoading(false);
     }

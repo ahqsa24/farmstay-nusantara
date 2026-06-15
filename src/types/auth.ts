@@ -22,6 +22,8 @@ export interface OwnerStepData {
   status_manajemen_energi?: string;
   status_manajemen_air?: string;
   status_manajemen_limbah?: string;
+  nomor_hp?: string;
+  alamat?: string;
 }
 
 export interface VisitorStepData {

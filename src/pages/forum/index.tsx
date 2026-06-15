@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { forumService } from "@/services/forumService";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -9,11 +10,15 @@ import { ForumStory } from "@/types/forum";
 export default function ForumPage() {
   const { user } = useAuth();
   const { t, locale } = useTranslation();
+  const router = useRouter();
 
   // Forum states
   const [stories, setStories] = useState<ForumStory[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"public" | "mine">("public");
+  const [activeTab, setActiveTab] = useState<"public" | "mine" | "moderation">("public");
+  const [moderationStatus, setModerationStatus] = useState<"pending" | "approved" | "rejected">("pending");
+  const [rejectingStoryId, setRejectingStoryId] = useState<number | null>(null);
+  const [rejectionReasonInput, setRejectionReasonInput] = useState("");
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -31,6 +36,17 @@ export default function ForumPage() {
       searchPlaceholder: "Cari cerita komunitas...",
       tabPublic: "Cerita Publik",
       tabMine: "Cerita Saya",
+      tabModeration: "Moderasi",
+      statusFilterPending: "Menunggu",
+      statusFilterApproved: "Disetujui",
+      statusFilterRejected: "Ditolak",
+      approveBtn: "Setujui",
+      rejectBtn: "Tolak",
+      submitRejectionBtn: "Kirim",
+      cancelBtn: "Batal",
+      rejectionReasonPlaceholder: "Masukkan alasan penolakan...",
+      rejectionReasonRequired: "Alasan penolakan wajib diisi.",
+      moderationSuccess: "Status cerita berhasil diperbarui!",
       noStories: "Belum ada cerita yang dibagikan.",
       readMore: "Baca Selengkapnya",
       authorLabel: "Oleh",
@@ -49,6 +65,17 @@ export default function ForumPage() {
       searchPlaceholder: "Search stories...",
       tabPublic: "Public Feed",
       tabMine: "My Stories",
+      tabModeration: "Moderation Feed",
+      statusFilterPending: "Pending",
+      statusFilterApproved: "Approved",
+      statusFilterRejected: "Rejected",
+      approveBtn: "Approve",
+      rejectBtn: "Reject",
+      submitRejectionBtn: "Submit",
+      cancelBtn: "Cancel",
+      rejectionReasonPlaceholder: "Enter rejection reason...",
+      rejectionReasonRequired: "Rejection reason is required.",
+      moderationSuccess: "Story status updated successfully!",
       noStories: "No stories shared yet.",
       readMore: "Read Full Story",
       authorLabel: "By",
@@ -62,6 +89,27 @@ export default function ForumPage() {
     },
   }[locale === "id" ? "id" : "en"];
 
+  const getErrorMessage = (err: any, fallback: string) => {
+    const data = err.response?.data;
+    if (data?.errors) {
+      const details = Object.entries(data.errors)
+        .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(", ")}`)
+        .join("; ");
+      return `${data.message || fallback} (${details})`;
+    }
+    return data?.message || fallback;
+  };
+
+  // Sync tab with router query
+  useEffect(() => {
+    if (router.isReady && router.query.tab) {
+      const tab = router.query.tab as string;
+      if (tab === "mine" || tab === "public" || (tab === "moderation" && user?.role === "admin")) {
+        setActiveTab(tab as any);
+      }
+    }
+  }, [router.isReady, router.query.tab, user]);
+
   // Fetch stories feed
   const fetchStories = async (resetPage = false) => {
     setIsLoading(true);
@@ -71,8 +119,10 @@ export default function ForumPage() {
       let response;
       if (activeTab === "public") {
         response = await forumService.getStories(targetPage, 6, searchQuery);
-      } else {
+      } else if (activeTab === "mine") {
         response = await forumService.getMyStories(targetPage, 6);
+      } else {
+        response = await forumService.adminGetStories(targetPage, 6, moderationStatus);
       }
 
       if (response.status === "success" && response.data) {
@@ -81,15 +131,54 @@ export default function ForumPage() {
         if (resetPage) setPage(1);
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || t.common.errorOccurred);
+      setErrorMsg(getErrorMessage(err, t.common.errorOccurred));
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleApprove = async (id: number) => {
+    setErrorMsg("");
+    try {
+      const response = await forumService.adminVerifyStory(id, { status: "approved" });
+      if (response.status === "success") {
+        fetchStories(false);
+      } else {
+        setErrorMsg(response.message || t.common.errorOccurred);
+      }
+    } catch (err: any) {
+      setErrorMsg(getErrorMessage(err, t.common.errorOccurred));
+    }
+  };
+
+  const handleRejectSubmit = async (e: React.FormEvent, id: number) => {
+    e.preventDefault();
+    if (!rejectionReasonInput.trim()) {
+      setErrorMsg(labels.rejectionReasonRequired);
+      return;
+    }
+
+    setErrorMsg("");
+    try {
+      const response = await forumService.adminVerifyStory(id, {
+        status: "rejected",
+        rejection_reason: rejectionReasonInput,
+      });
+      if (response.status === "success") {
+        setRejectingStoryId(null);
+        setRejectionReasonInput("");
+        fetchStories(false);
+      } else {
+        setErrorMsg(response.message || t.common.errorOccurred);
+      }
+    } catch (err: any) {
+      setErrorMsg(getErrorMessage(err, t.common.errorOccurred));
+    }
+  };
+
   useEffect(() => {
     fetchStories(true);
-  }, [activeTab]);
+  }, [activeTab, moderationStatus]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,6 +257,16 @@ export default function ForumPage() {
               >
                 {labels.tabPublic}
               </button>
+              {user?.role === "admin" && (
+                <button
+                  onClick={() => { setActiveTab("moderation"); setSearchQuery(""); }}
+                  className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    activeTab === "moderation" ? "bg-farm-green text-white shadow" : "text-farm-text/60"
+                  }`}
+                >
+                  {labels.tabModeration}
+                </button>
+              )}
               <button
                 onClick={() => { setActiveTab("mine"); setSearchQuery(""); }}
                 className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${
@@ -177,6 +276,36 @@ export default function ForumPage() {
                 {labels.tabMine}
               </button>
             </div>
+
+            {/* Sub-filters for admin moderation status */}
+            {activeTab === "moderation" && (
+              <div className="flex border border-farm-border rounded-lg p-0.5 bg-farm-cream w-fit shrink-0">
+                <button
+                  onClick={() => setModerationStatus("pending")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    moderationStatus === "pending" ? "bg-farm-gold text-white shadow" : "text-farm-text/60"
+                  }`}
+                >
+                  {labels.statusFilterPending}
+                </button>
+                <button
+                  onClick={() => setModerationStatus("approved")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    moderationStatus === "approved" ? "bg-farm-gold text-white shadow" : "text-farm-text/60"
+                  }`}
+                >
+                  {labels.statusFilterApproved}
+                </button>
+                <button
+                  onClick={() => setModerationStatus("rejected")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    moderationStatus === "rejected" ? "bg-farm-gold text-white shadow" : "text-farm-text/60"
+                  }`}
+                >
+                  {labels.statusFilterRejected}
+                </button>
+              </div>
+            )}
 
             {/* Inline search bar (only for public feed) */}
             {activeTab === "public" && (
@@ -243,8 +372,8 @@ export default function ForumPage() {
                     </div>
                   )}
                   
-                  {/* Status badge in "My stories" */}
-                  {activeTab === "mine" && (
+                  {/* Status badge in "My stories" or Moderation */}
+                  {(activeTab === "mine" || activeTab === "moderation") && (
                     <span className={`absolute top-3 right-3 px-2 py-0.5 rounded text-[9px] font-extrabold uppercase shadow-sm ${getStoryStatusBadgeColor(story.status)}`}>
                       {getStoryStatusLabel(story.status)}
                     </span>
@@ -266,9 +395,115 @@ export default function ForumPage() {
                   </div>
 
                   {/* Rejection notice details */}
-                  {activeTab === "mine" && story.status === "rejected" && story.rejection_reason && (
+                  {(activeTab === "mine" || activeTab === "moderation") && story.status === "rejected" && story.rejection_reason && (
                     <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-lg text-[10px] text-red-800 leading-normal">
                       <span className="font-bold">{labels.rejectionReason}</span> {story.rejection_reason}
+                    </div>
+                  )}
+
+                  {/* Admin Moderation Actions */}
+                  {activeTab === "moderation" && (
+                    <div className="mt-4 pt-4 border-t border-farm-border/60">
+                      {story.status === "pending" && (
+                        <>
+                          {rejectingStoryId !== story.id ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleApprove(story.id)}
+                                className="flex-1 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors"
+                              >
+                                {labels.approveBtn}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setRejectingStoryId(story.id);
+                                  setRejectionReasonInput("");
+                                }}
+                                className="flex-1 h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-colors"
+                              >
+                                {labels.rejectBtn}
+                              </button>
+                            </div>
+                          ) : (
+                            <form onSubmit={(e) => handleRejectSubmit(e, story.id)} className="space-y-2">
+                              <textarea
+                                value={rejectionReasonInput}
+                                onChange={(e) => setRejectionReasonInput(e.target.value)}
+                                placeholder={labels.rejectionReasonPlaceholder}
+                                required
+                                rows={2}
+                                className="w-full p-2 border border-farm-border rounded-lg bg-farm-cream text-xs focus:outline-none focus:ring-1 focus:ring-farm-green resize-none"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  type="submit"
+                                  className="flex-1 h-8 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-semibold transition-colors"
+                                >
+                                  {labels.submitRejectionBtn}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setRejectingStoryId(null)}
+                                  className="px-3 h-8 rounded-lg border border-farm-border text-farm-text hover:bg-farm-cream text-[11px] font-semibold transition-colors"
+                                >
+                                  {labels.cancelBtn}
+                                </button>
+                              </div>
+                            </form>
+                          )}
+                        </>
+                      )}
+
+                      {story.status === "approved" && (
+                        <>
+                          {rejectingStoryId !== story.id ? (
+                            <button
+                              onClick={() => {
+                                  setRejectingStoryId(story.id);
+                                  setRejectionReasonInput("");
+                              }}
+                              className="w-full h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-colors"
+                            >
+                              {labels.rejectBtn}
+                            </button>
+                          ) : (
+                            <form onSubmit={(e) => handleRejectSubmit(e, story.id)} className="space-y-2">
+                              <textarea
+                                value={rejectionReasonInput}
+                                onChange={(e) => setRejectionReasonInput(e.target.value)}
+                                placeholder={labels.rejectionReasonPlaceholder}
+                                required
+                                rows={2}
+                                className="w-full p-2 border border-farm-border rounded-lg bg-farm-cream text-xs focus:outline-none focus:ring-1 focus:ring-farm-green resize-none"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  type="submit"
+                                  className="flex-1 h-8 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-semibold transition-colors"
+                                >
+                                  {labels.submitRejectionBtn}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setRejectingStoryId(null)}
+                                  className="px-3 h-8 rounded-lg border border-farm-border text-farm-text hover:bg-farm-cream text-[11px] font-semibold transition-colors"
+                                >
+                                  {labels.cancelBtn}
+                                </button>
+                              </div>
+                            </form>
+                          )}
+                        </>
+                      )}
+
+                      {story.status === "rejected" && (
+                        <button
+                          onClick={() => handleApprove(story.id)}
+                          className="w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors"
+                        >
+                          {labels.approveBtn} (Pindahkan ke Setuju)
+                        </button>
+                      )}
                     </div>
                   )}
 
