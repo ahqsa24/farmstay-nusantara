@@ -65,7 +65,8 @@ export const farmstayService = {
    * Admin: Register a new reference Farmstay (local/global)
    */
   async adminCreateFarmstay(payload: AdminFarmstayPayload | FormData): Promise<ApiResponse<any>> {
-    const headers = payload instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined;
+    // Let Axios set the Content-Type automatically for FormData to include the boundary
+    const headers = payload instanceof FormData ? undefined : undefined;
     const response = await apiClient.post<ApiResponse<any>>(
       "/admin/farmstays",
       payload,
@@ -81,7 +82,7 @@ export const farmstayService = {
     id: number | string,
     payload: Partial<AdminFarmstayPayload> | FormData
   ): Promise<ApiResponse<any>> {
-    const headers = payload instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined;
+    const headers = payload instanceof FormData ? undefined : undefined;
     const response = await apiClient.put<ApiResponse<any>>(
       `/admin/farmstays/${id}`,
       payload,

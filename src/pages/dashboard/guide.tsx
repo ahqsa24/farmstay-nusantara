@@ -3,239 +3,168 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "@/hooks/useTranslation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import guideService from "@/services/guideService";
-import { GuideData } from "@/types/guide";
+import { guideService } from "@/services/guideService";
+import { GuideSection, FaqItem } from "@/types/guide";
 
 export default function GuidePage() {
   const { user } = useAuth();
   const { locale } = useTranslation();
-  const [guideData, setGuideData] = useState<GuideData | null>(null);
+  const isId = locale === "id";
+
+  const [sections, setSections] = useState<GuideSection[]>([]);
+  const [faqs, setFaqs] = useState<FaqItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeAccordion, setActiveAccordion] = useState<number | null>(null);
+  const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   useEffect(() => {
-    async function loadGuide() {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
-        const response = await guideService.getGuideData(user?.role || "owner", locale || "id");
-        if (response.status === "success" && response.data) {
-          setGuideData(response.data);
+        // Fetch specific to role, and also fallback 'all' is handled by backend
+        const role = user?.role || "visitor";
+        const [secRes, faqRes] = await Promise.all([
+          guideService.getGuideSections(role),
+          guideService.getFaqItems(role)
+        ]);
+
+        if (secRes.status === "success" && secRes.data) {
+          setSections(secRes.data);
         }
-      } catch (err) {
-        console.error("Failed to load guide data", err);
+        if (faqRes.status === "success" && faqRes.data) {
+          setFaqs(faqRes.data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch guide data:", e);
       } finally {
         setIsLoading(false);
       }
+    };
+    if (user) {
+      fetchData();
     }
-    if (user?.role) {
-      loadGuide();
-    }
-  }, [user?.role, locale]);
+  }, [user]);
 
-  const toggleAccordion = (idx: number) => {
-    setActiveAccordion(activeAccordion === idx ? null : idx);
+  const toggleFaq = (idx: number) => {
+    setActiveFaq(activeFaq === idx ? null : idx);
   };
-
-  if (isLoading || !guideData) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-farm-green border-t-transparent"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto flex flex-col gap-6">
         
-        {/* Dynamic Header Card with Books Background */}
-        <div className="relative rounded-2xl overflow-hidden bg-farm-green-dark text-white p-8 md:p-10 shadow-md">
-          {/* Background image overlay */}
-          <div 
-            className="absolute inset-0 opacity-20 bg-cover bg-center mix-blend-overlay"
-            style={{ backgroundImage: "url('/images/books-bg.png')" }}
-          ></div>
-          {/* Content */}
-          <div className="relative z-10 flex flex-col gap-1.5">
-            <div className="text-[11px] font-extrabold tracking-widest text-farm-cream/80 uppercase flex items-center gap-1.5">
-              <Link href="/dashboard" className="hover:text-white transition-colors">
-                {locale === "id" ? "Dashboard" : "Dashboard"}
-              </Link>
-              <span className="text-farm-cream/50">/</span>
-              <span className="text-farm-gold">{locale === "id" ? "Panduan" : "User Guide"}</span>
+        {/* Hero Banner Card */}
+        <div className="bg-[#122A23] rounded-2xl p-8 relative overflow-hidden shadow-lg">
+          {/* Subtle background pattern/overlay */}
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none"></div>
+          
+          <div className="relative z-10">
+            <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+              <Link href="/dashboard" className="hover:text-amber-400 transition-colors">DASHBOARD</Link> 
+              <span>/</span> 
+              <span>{isId ? "PANDUAN" : "GUIDE"}</span>
             </div>
-            <h1 className="font-serif text-3xl md:text-4xl font-extrabold text-farm-cream mt-2 tracking-tight">
-              {guideData.title}
+            
+            <h1 className="font-serif text-3xl md:text-4xl font-bold text-white mb-3">
+              {isId ? "Panduan Pengguna" : "User Guide"}
             </h1>
-            <p className="text-xs sm:text-sm font-light text-farm-cream/90 mt-1 max-w-2xl leading-relaxed">
-              {guideData.subtitle}
+            
+            <p className="text-sm md:text-base text-gray-300 font-light max-w-2xl">
+              {isId 
+                ? "Panduan lengkap untuk memulai, mengelola, dan memaksimalkan platform Farmstay Nusantara." 
+                : "A complete guide to starting, managing, and maximizing the Farmstay Nusantara platform."}
             </p>
           </div>
         </div>
 
-        {/* Main Content Card */}
-        <div className="bg-white border border-farm-border rounded-2xl p-6 sm:p-10 shadow-sm flex flex-col gap-8">
-          {/* Welcome Section */}
-          <div>
-            <h2 className="font-serif text-xl sm:text-2xl font-extrabold text-farm-text mb-4">
-              {guideData.welcomeTitle}
-            </h2>
-            <div className="flex flex-col gap-4 text-xs sm:text-sm text-farm-text-light font-light leading-relaxed">
-              <p>{guideData.welcomeText1}</p>
-              <p>{guideData.welcomeText2}</p>
-            </div>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-farm-green border-t-transparent"></div>
           </div>
-
-          {/* Getting Started Section */}
-          <div className="border-t border-farm-border/60 pt-8">
-            <h3 className="font-serif text-lg sm:text-xl font-bold text-farm-text mb-6">
-              {guideData.gettingStartedTitle}
-            </h3>
-            
-            <div className="flex flex-col gap-8">
-              {guideData.steps.map((step) => (
-                <div key={step.number} className="flex gap-4 items-start">
-                  {/* Step Number Circle */}
-                  <div className="h-7 w-7 rounded-full bg-farm-green text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                    {step.number}
-                  </div>
-                  
-                  {/* Step Content */}
-                  <div className="flex flex-col gap-2 min-w-0">
-                    <h4 className="font-serif text-sm sm:text-base font-extrabold text-farm-text">
-                      {step.title}
-                    </h4>
-                    <p className="text-xs sm:text-sm text-farm-text-light font-light leading-relaxed">
-                      {step.content}
-                    </p>
-                    
-                    {/* Pillar Badges for Step 2 */}
-                    {step.showPillBadges && (
-                      <div className="flex flex-wrap gap-2.5 mt-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] sm:text-xs font-bold bg-[#FFF3E0] text-[#EF6C00] border border-[#FFE0B2] shadow-sm">
-                          <span className="w-4 h-4 rounded bg-[#EF6C00] text-white font-extrabold flex items-center justify-center text-[9px]">A</span>
-                          {locale === "id" ? "Pengelolaan Berkelanjutan" : "Sustainable Management"}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] sm:text-xs font-bold bg-[#E8F5E9] text-[#2E7D32] border border-[#C8E6C9] shadow-sm">
-                          <span className="w-4 h-4 rounded bg-[#2E7D32] text-white font-extrabold flex items-center justify-center text-[9px]">B</span>
-                          {locale === "id" ? "Sosial-Ekonomi" : "Socio-economic"}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] sm:text-xs font-bold bg-[#E3F2FD] text-[#1565C0] border border-[#BBDEFB] shadow-sm">
-                          <span className="w-4 h-4 rounded bg-[#1565C0] text-white font-extrabold flex items-center justify-center text-[9px]">C</span>
-                          {locale === "id" ? "Budaya" : "Cultural"}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] sm:text-xs font-bold bg-[#E0F2F1] text-[#00695C] border border-[#B2DFDB] shadow-sm">
-                          <span className="w-4 h-4 rounded bg-[#00695C] text-white font-extrabold flex items-center justify-center text-[9px]">D</span>
-                          {locale === "id" ? "Lingkungan" : "Environmental"}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Subpoints/Bullets for Step 3 */}
-                    {step.subPoints && step.subPoints.length > 0 && (
-                      <ul className="flex flex-col gap-2 mt-2 pl-4 list-disc text-xs sm:text-sm text-farm-text-light font-light leading-relaxed">
-                        {step.subPoints.map((bullet, bIdx) => {
-                          // Parse markdown bold **text** in bullets
-                          const parts = bullet.split("**");
-                          return (
-                            <li key={bIdx}>
-                              {parts.map((part, pIdx) => 
-                                pIdx % 2 === 1 ? <strong key={pIdx} className="font-extrabold text-farm-text">{part}</strong> : part
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Consultant Interaction Section */}
-          {guideData.interactionTitle && (
-            <div className="border-t border-farm-border/60 pt-8">
-              <h3 className="font-serif text-lg sm:text-xl font-bold text-farm-text mb-4">
-                {guideData.interactionTitle}
-              </h3>
-              <div className="flex flex-col gap-4 text-xs sm:text-sm text-farm-text-light font-light leading-relaxed">
-                <p>{guideData.interactionText1}</p>
-                <p>{guideData.interactionText2}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Other Supporting Features Section */}
-          <div className="border-t border-farm-border/60 pt-8">
-            <h3 className="font-serif text-lg sm:text-xl font-bold text-farm-text mb-4">
-              {guideData.otherFeaturesTitle}
-            </h3>
-            
-            <ul className="flex flex-col gap-4 pl-4 list-disc text-xs sm:text-sm text-farm-text-light font-light leading-relaxed">
-              {guideData.otherFeatures.map((feat, idx) => (
-                <li key={idx}>
-                  <strong className="font-extrabold text-farm-text">{feat.title}: </strong>
-                  {feat.content}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* FAQ Section */}
-        <div className="bg-white border border-farm-border rounded-2xl p-6 sm:p-10 shadow-sm flex flex-col gap-6">
-          <div className="flex items-center gap-2.5 border-b border-farm-border/60 pb-4 mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-farm-green shrink-0">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-            </svg>
-            <h3 className="font-serif text-lg sm:text-xl font-bold text-farm-text">
-              {guideData.faqTitle}
-            </h3>
-          </div>
-          
-          <div className="flex flex-col divide-y divide-farm-border/60">
-            {guideData.faqs.map((faq, idx) => {
-              const isOpen = activeAccordion === idx;
-              return (
-                <div key={idx} className="flex flex-col py-3.5 first:pt-0 last:pb-0">
-                  <button
-                    onClick={() => toggleAccordion(idx)}
-                    className="flex items-center justify-between text-left font-serif font-extrabold text-sm sm:text-base text-farm-text hover:text-farm-green transition-all duration-200 w-full focus:outline-none py-1"
-                  >
-                    <span>{faq.question}</span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2.5}
-                      stroke="currentColor"
-                      className={`w-4 h-4 text-farm-text-light transition-transform duration-300 ${isOpen ? "transform rotate-180 text-farm-green" : ""}`}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                    </svg>
-                  </button>
-                  
-                  {/* Smooth height transition wrapper */}
-                  <div
-                    className={`grid transition-all duration-300 ease-in-out ${
-                      isOpen ? "grid-rows-[1fr] opacity-100 mt-2.5" : "grid-rows-[0fr] opacity-0 mt-0"
-                    }`}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="text-xs sm:text-sm text-farm-text-light leading-relaxed font-light pl-1 pb-1">
-                        {faq.answer}
-                      </div>
+        ) : (
+          <>
+            {/* Guide Sections Card */}
+            {sections.length > 0 && (
+              <div className="bg-white border border-farm-border rounded-2xl shadow-sm p-6 md:p-8 flex flex-col gap-8">
+                {sections.map((section, idx) => (
+                  <div key={section.id} className="flex flex-col gap-3">
+                    {/* Render title with bold serif font like the design */}
+                    <h2 className="font-serif text-xl md:text-2xl font-bold text-farm-text">
+                      {section.title}
+                    </h2>
+                    <div className="text-sm md:text-base text-farm-text-light font-light leading-relaxed whitespace-pre-wrap">
+                      {section.content}
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                ))}
+              </div>
+            )}
 
+            {/* FAQ Card */}
+            {faqs.length > 0 && (
+              <div className="bg-[#FAF9F5] border border-farm-border rounded-2xl shadow-sm p-6 md:p-8">
+                <div className="flex items-center gap-2 mb-6">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-farm-green">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                  </svg>
+                  <h3 className="font-serif text-lg font-bold text-farm-text">
+                    {isId ? "Pertanyaan yang Sering Diajukan (FAQ)" : "Frequently Asked Questions (FAQ)"}
+                  </h3>
+                </div>
+
+                <div className="flex flex-col border-t border-farm-border/60">
+                  {faqs.map((faq, idx) => {
+                    const isOpen = activeFaq === idx;
+                    return (
+                      <div key={faq.id} className="border-b border-farm-border/60 last:border-0">
+                        <button
+                          onClick={() => toggleFaq(idx)}
+                          className="flex items-center justify-between w-full py-4 text-left group focus:outline-none"
+                        >
+                          <span className="font-bold text-sm md:text-base text-farm-text group-hover:text-farm-green transition-colors pr-4">
+                            {faq.question}
+                          </span>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2.5}
+                            stroke="currentColor"
+                            className={`w-4 h-4 text-farm-text-light transition-transform duration-300 shrink-0 ${
+                              isOpen ? "transform rotate-180 text-farm-green" : ""
+                            }`}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                          </svg>
+                        </button>
+                        
+                        <div
+                          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                            isOpen ? "max-h-96 opacity-100 pb-5" : "max-h-0 opacity-0"
+                          }`}
+                        >
+                          <p className="text-sm md:text-base text-farm-text-light font-light leading-relaxed whitespace-pre-wrap">
+                            {faq.answer}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Fallback if both empty */}
+            {!isLoading && sections.length === 0 && faqs.length === 0 && (
+              <div className="bg-white border border-farm-border rounded-2xl shadow-sm p-12 text-center flex flex-col items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-16 h-16 text-farm-text-light/50 mb-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25M10.125 5.17l-1.672-1.04A9.047 9.047 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c1.378 0 2.682.31 3.846.862l1.672-1.04m-1.393-12.652A8.967 8.967 0 0118 3.75c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-3.846.862l-1.672-1.04" />
+                </svg>
+                <h3 className="text-lg font-bold text-farm-text mb-1">{isId ? "Belum Ada Panduan" : "No Guides Yet"}</h3>
+                <p className="text-sm text-farm-text-light">{isId ? "Admin sedang menyusun panduan untuk Anda." : "Admins are preparing the guides for you."}</p>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

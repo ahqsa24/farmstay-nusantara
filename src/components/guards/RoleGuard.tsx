@@ -1,4 +1,5 @@
 import React from "react";
+import { useRouter } from "next/router";
 import { useAuth } from "../../hooks/useAuth";
 import { UserRole } from "../../types/auth";
 
@@ -9,8 +10,9 @@ interface RoleGuardProps {
 }
 
 /**
- * Route guard that restricts access based on user role (e.g. Owner only, Admin only).
- * If user does not have an allowed role, it displays an unauthorized warning screen or custom fallback.
+ * Route guard that restricts access based on user role.
+ * - If not authenticated: redirects to /auth/login
+ * - If authenticated but wrong role: shows 403 screen
  */
 export const RoleGuard: React.FC<RoleGuardProps> = ({
   children,
@@ -18,8 +20,9 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   fallback,
 }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
 
-  // If auth is loading, let it be handled by AuthGuard or show default loading here
+  // Loading state
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
@@ -31,9 +34,26 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
     );
   }
 
-  const hasAccess = isAuthenticated && user && allowedRoles.includes(user.role);
+  // Not authenticated → redirect to login
+  if (!isAuthenticated || !user) {
+    if (typeof window !== "undefined") {
+      router.replace({
+        pathname: "/auth/login",
+        query: { redirect: router.asPath },
+      });
+    }
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent"></div>
+          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Mengalihkan ke halaman login...</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (!hasAccess) {
+  // Authenticated but wrong role → show 403
+  if (!allowedRoles.includes(user.role)) {
     return (
       fallback || (
         <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 text-center dark:bg-zinc-950">

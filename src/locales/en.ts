@@ -106,6 +106,14 @@ export const en = {
     backToLogin: "Back to Login",
     successMsg: "Reset link has been sent to your email.",
   },
+  resetPassword: {
+    title: "Reset Password",
+    subtitle: "Enter a new password for your account",
+    newPassword: "New Password",
+    confirmNewPassword: "Confirm New Password",
+    resetBtn: "Reset Password",
+    successMsg: "Your password has been successfully updated. Please log in with your new password.",
+  },
   register: {
     title: "Create Account",
     subtitle: "Choose your role and start your journey",

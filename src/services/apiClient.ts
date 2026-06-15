@@ -40,6 +40,8 @@ apiClient.interceptors.response.use(
           window.location.href = `/auth/login?expired=true&redirect=${encodeURIComponent(
             window.location.pathname + window.location.search
           )}`;
+          // Return pending promise to prevent the error from bubbling up while redirecting
+          return new Promise(() => {});
         }
       }
     }

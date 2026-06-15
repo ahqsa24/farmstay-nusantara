@@ -13,6 +13,8 @@ export interface AuthContextType {
   error: string | null;
   login: (payload: LoginRequest) => Promise<boolean>;
   register: (payload: RegisterRequest) => Promise<boolean>;
+  forgotPassword: (payload: { email: string }) => Promise<boolean>;
+  resetPassword: (payload: { token: string; new_password: string; new_password_confirmation: string }) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -130,6 +132,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const forgotPassword = async (payload: { email: string }): Promise<boolean> => {
+    setError(null);
+    try {
+      const response = await authService.forgotPassword(payload);
+      if (response.status === "success") {
+        return true;
+      } else {
+        setError(response.message || "Gagal mengirim link reset password.");
+        return false;
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Terjadi kesalahan. Coba lagi.";
+      setError(msg);
+      return false;
+    }
+  };
+
+  const resetPassword = async (payload: { token: string; new_password: string; new_password_confirmation: string }): Promise<boolean> => {
+    setError(null);
+    try {
+      const response = await authService.resetPassword(payload);
+      if (response.status === "success") {
+        return true;
+      } else {
+        setError(response.message || "Gagal mengatur ulang password.");
+        return false;
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Terjadi kesalahan. Pastikan link reset valid dan belum kadaluwarsa.";
+      setError(msg);
+      return false;
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -178,6 +214,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         error,
         login,
         register,
+        forgotPassword,
+        resetPassword,
         logout,
         refreshProfile,
       }}

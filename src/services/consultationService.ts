@@ -125,6 +125,16 @@ export const consultationService = {
     );
     return response.data;
   },
+
+  /**
+   * Admin: Delete a closed consultation session
+   */
+  async adminDelete(sessionId: number | string): Promise<ApiResponse<null>> {
+    const response = await apiClient.delete<ApiResponse<null>>(
+      `/admin/consultations/${sessionId}`
+    );
+    return response.data;
+  },
 };
 
 export default consultationService;

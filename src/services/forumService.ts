@@ -84,6 +84,14 @@ export const forumService = {
     );
     return response.data;
   },
+
+  /**
+   * Admin: Delete a story
+   */
+  async adminDeleteStory(id: number | string): Promise<ApiResponse<null>> {
+    const response = await apiClient.delete<ApiResponse<null>>(`/admin/forum/stories/${id}`);
+    return response.data;
+  },
 };
 
 export default forumService;

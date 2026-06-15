@@ -106,6 +106,14 @@ export const id = {
     backToLogin: "Kembali ke Login",
     successMsg: "Link reset kata sandi telah dikirim ke email Anda.",
   },
+  resetPassword: {
+    title: "Atur Ulang Kata Sandi",
+    subtitle: "Masukkan kata sandi baru untuk akun Anda",
+    newPassword: "Kata Sandi Baru",
+    confirmNewPassword: "Konfirmasi Kata Sandi Baru",
+    resetBtn: "Atur Ulang Kata Sandi",
+    successMsg: "Kata sandi Anda berhasil diperbarui. Silakan masuk dengan kata sandi baru.",
+  },
   register: {
     title: "Buat Akun",
     subtitle: "Pilih peran Anda dan mulai perjalanan",
