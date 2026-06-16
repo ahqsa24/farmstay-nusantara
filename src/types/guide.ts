@@ -1,35 +1,33 @@
 export interface GuideSection {
+  id: number;
+  role: string;
   title: string;
   content: string;
-  bullets?: string[];
-}
-
-export interface GuideStep {
-  number: number;
-  title: string;
-  content: string;
-  subPoints?: string[];
-  showPillBadges?: boolean;
+  orderNumber?: number;
+  isActive?: boolean;
 }
 
 export interface FaqItem {
+  id: number;
+  role: string;
   question: string;
   answer: string;
+  orderNumber?: number;
+  isActive?: boolean;
 }
 
-export interface GuideData {
+export interface AdminGuideSectionPayload {
+  role: string;
   title: string;
-  subtitle: string;
-  welcomeTitle: string;
-  welcomeText1: string;
-  welcomeText2: string;
-  gettingStartedTitle: string;
-  steps: GuideStep[];
-  interactionTitle?: string;
-  interactionText1?: string;
-  interactionText2?: string;
-  otherFeaturesTitle: string;
-  otherFeatures: GuideSection[];
-  faqTitle: string;
-  faqs: FaqItem[];
+  content: string;
+  order_number?: number;
+  is_active?: boolean;
+}
+
+export interface AdminFaqItemPayload {
+  role: string;
+  question: string;
+  answer: string;
+  order_number?: number;
+  is_active?: boolean;
 }

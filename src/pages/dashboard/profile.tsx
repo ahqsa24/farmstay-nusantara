@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { profileService } from "@/services/profileService";
 import { useTranslation } from "@/hooks/useTranslation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { masterDataService } from "@/services/masterDataService";
 
 export default function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -26,6 +27,8 @@ export default function ProfilePage() {
   const [bedCount, setBedCount] = useState(0);
   const [selectedDisasters, setSelectedDisasters] = useState<string[]>([]);
   const [selectedZones, setSelectedZones] = useState<string[]>([]);
+  const [disasterOptions, setDisasterOptions] = useState<string[]>([]);
+  const [zoneOptions, setZoneOptions] = useState<string[]>([]);
 
   // Password change form state
   const [oldPassword, setOldPassword] = useState("");
@@ -49,6 +52,34 @@ export default function ProfilePage() {
       }
     }
   }, [profile]);
+
+  useEffect(() => {
+    const loadProfileOptions = async () => {
+      try {
+        const disasterRes = await masterDataService.getMasterData("bencana_alam");
+        if (disasterRes.status === "success" && disasterRes.data && disasterRes.data.length > 0) {
+          setDisasterOptions(disasterRes.data.map((item) => item.label));
+        } else {
+          setDisasterOptions(["Banjir", "Gempa Bumi", "Tanah Longsor", "Tsunami", "Gunung Berapi", "Kekeringan"]);
+        }
+      } catch {
+        setDisasterOptions(["Banjir", "Gempa Bumi", "Tanah Longsor", "Tsunami", "Gunung Berapi", "Kekeringan"]);
+      }
+
+      try {
+        const zoneRes = await masterDataService.getMasterData("kawasan_khusus");
+        if (zoneRes.status === "success" && zoneRes.data && zoneRes.data.length > 0) {
+          setZoneOptions(zoneRes.data.map((item) => item.label));
+        } else {
+          setZoneOptions(["Taman Nasional", "Cagar Biosfer", "Geopark", "Kawasan Lindung", "Taman Wisata Alam"]);
+        }
+      } catch {
+        setZoneOptions(["Taman Nasional", "Cagar Biosfer", "Geopark", "Kawasan Lindung", "Taman Wisata Alam"]);
+      }
+    };
+
+    loadProfileOptions();
+  }, []);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,7 +190,7 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto flex flex-col gap-8">
+      <div className="max-w-5xl mx-auto flex flex-col gap-8">
           {/* Header & Back Button */}
           <div className="flex items-center justify-between border-b border-farm-border/60 pb-5">
             <div>
@@ -312,7 +343,7 @@ export default function ProfilePage() {
                       <div className="sm:col-span-2">
                         <label className="block text-xs font-semibold text-farm-text mb-2">Risiko Bencana Alam</label>
                         <div className="flex flex-wrap gap-3">
-                          {["Banjir", "Gempa Bumi", "Tanah Longsor", "Tsunami", "Gunung Meletus"].map((disaster) => {
+                          {disasterOptions.map((disaster) => {
                             const isChecked = selectedDisasters.includes(disaster);
                             return (
                               <button
@@ -334,7 +365,7 @@ export default function ProfilePage() {
                       <div className="sm:col-span-2">
                         <label className="block text-xs font-semibold text-farm-text mb-2">Status Kawasan Khusus</label>
                         <div className="flex flex-wrap gap-3">
-                          {["Taman Nasional", "Geopark", "Cagar Budaya", "Kawasan Lindung"].map((zone) => {
+                          {zoneOptions.map((zone) => {
                             const isChecked = selectedZones.includes(zone);
                             return (
                               <button

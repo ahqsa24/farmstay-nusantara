@@ -53,9 +53,18 @@ export default function ForgotPassword() {
   return (
     <GuestGuard>
       <div className="min-h-screen bg-farm-beige font-sans flex flex-col md:flex-row">
-        {/* Left Side: Solid Brand Panel (Gambar 1 style) */}
-        <div className="hidden md:flex md:w-[38%] bg-gradient-to-br from-farm-green to-farm-green-dark text-white p-12 flex-col justify-between shrink-0 sticky top-0 h-screen select-none border-r border-farm-border">
-          <div className="space-y-8">
+        {/* Left Side: Brand Panel with Background Image */}
+        <div
+          className="hidden md:flex md:w-[38%] text-white p-12 flex-col justify-between shrink-0 sticky top-0 h-screen select-none border-r border-farm-border relative overflow-hidden"
+          style={{
+            backgroundImage: "url('/images/hero_bg.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          {/* Green overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-farm-green/90 to-farm-green-dark/95 z-0" />
+          <div className="space-y-8 relative z-10">
             <Link href="/" className="inline-flex items-center text-xs font-bold text-farm-cream/80 hover:text-white border border-white/20 rounded-full px-4 py-1.5 hover:bg-white/10 transition-all">
               ← Kembali ke Beranda
             </Link>
@@ -79,7 +88,7 @@ export default function ForgotPassword() {
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-6 text-[10px] font-light text-farm-cream/60">
+          <div className="border-t border-white/10 pt-6 text-[10px] font-light text-farm-cream/60 relative z-10">
             {t.footer.copyright}
           </div>
         </div>

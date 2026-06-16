@@ -6,9 +6,11 @@ import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { complianceService } from "@/services/complianceService";
 import { assessmentService } from "@/services/assessmentService";
+import { adminService } from "@/services/adminService";
+import { consultationService } from "@/services/consultationService";
 import { forumService } from "@/services/forumService";
+import { farmstayService } from "@/services/farmstayService";
 import { useTranslation } from "@/hooks/useTranslation";
-import { ForumStory } from "@/types/forum";
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
@@ -21,21 +23,21 @@ export default function Dashboard() {
   const [assessmentReadiness, setAssessmentReadiness] = useState("");
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
-  // Admin states
-  const [adminPendingStories, setAdminPendingStories] = useState<ForumStory[]>([]);
-  const [adminPendingCount, setAdminPendingCount] = useState(0);
-  const [isAdminLoading, setIsAdminLoading] = useState(false);
-  const [adminRejectingStoryId, setAdminRejectingStoryId] = useState<number | null>(null);
-  const [adminRejectionReason, setAdminRejectionReason] = useState("");
-  const [adminSuccessMsg, setAdminSuccessMsg] = useState("");
-  const [adminErrorMsg, setAdminErrorMsg] = useState("");
-
   // Checklist items state for Owner Dashboard
   const [checkedItems, setCheckedItems] = useState<Record<number, boolean>>({
     0: false,
     1: true,
     2: false,
   });
+
+  // Admin metrics states
+  const [adminMetrics, setAdminMetrics] = useState({
+    totalUsers: 0,
+    totalFarmstays: 0,
+    pendingConsultations: 0,
+    pendingStories: 0,
+  });
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
 
   const toggleCheck = (idx: number) => {
     setCheckedItems((prev) => ({
@@ -44,7 +46,7 @@ export default function Dashboard() {
     }));
   };
 
-  // Fetch actual metrics for Owner or Admin on mount
+  // Fetch actual metrics for Owner on mount
   useEffect(() => {
     if (user?.role === "owner") {
       const fetchMetrics = async () => {
@@ -75,88 +77,48 @@ export default function Dashboard() {
       };
 
       fetchMetrics();
-    } else if (user?.role === "admin") {
-      const fetchAdminData = async () => {
+    }
+
+    // Admin metrics
+    if (user?.role === "admin") {
+      const fetchAdminMetrics = async () => {
         setIsAdminLoading(true);
         try {
-          const response = await forumService.adminGetStories(1, 100, "pending");
-          if (response.status === "success" && response.data) {
-            setAdminPendingStories(response.data.slice(0, 3));
-            setAdminPendingCount(response.data.length);
-          }
+          const [usersRes, farmstaysRes, consultationsRes, forumRes] = await Promise.allSettled([
+            adminService.getUsers(1, 1),
+            farmstayService.adminGetFarmstays(1, 1),
+            consultationService.adminGetSessions(1, 1, "", "open"),
+            forumService.adminGetStories(1, 1, "pending"),
+          ]);
+
+          const getCount = (res: PromiseSettledResult<any>) => {
+            if (res.status === "fulfilled" && res.value?.status === "success") {
+              if (res.value.meta?.total !== undefined) return res.value.meta.total;
+              if (res.value.pagination?.total !== undefined) return res.value.pagination.total;
+              const d = res.value.data;
+              if (d?.pagination?.total !== undefined) return d.pagination.total;
+              if (d?.meta?.total !== undefined) return d.meta.total;
+              if (Array.isArray(d)) return d.length;
+              if (d?.data && Array.isArray(d.data)) return d.pagination?.total || d.meta?.total || d.data.length;
+            }
+            return 0;
+          };
+
+          setAdminMetrics({
+            totalUsers: getCount(usersRes),
+            totalFarmstays: getCount(farmstaysRes),
+            pendingConsultations: getCount(consultationsRes),
+            pendingStories: getCount(forumRes),
+          });
         } catch (e) {
-          console.error("Failed to fetch admin dashboard data:", e);
+          console.error("Failed to fetch admin metrics:", e);
         } finally {
           setIsAdminLoading(false);
         }
       };
-
-      fetchAdminData();
+      fetchAdminMetrics();
     }
   }, [user]);
-
-  const getAdminErrorMessage = (err: any, fallback: string) => {
-    const data = err.response?.data;
-    if (data?.errors) {
-      const details = Object.entries(data.errors)
-        .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(", ")}`)
-        .join("; ");
-      return `${data.message || fallback} (${details})`;
-    }
-    return data?.message || fallback;
-  };
-
-  const handleAdminApprove = async (id: number) => {
-    setAdminErrorMsg("");
-    setAdminSuccessMsg("");
-    try {
-      const response = await forumService.adminVerifyStory(id, { status: "approved" });
-      if (response.status === "success") {
-        setAdminSuccessMsg(locale === "id" ? "Cerita berhasil disetujui!" : "Story approved successfully!");
-        // Refresh admin data
-        const refreshResponse = await forumService.adminGetStories(1, 100, "pending");
-        if (refreshResponse.status === "success" && refreshResponse.data) {
-          setAdminPendingStories(refreshResponse.data.slice(0, 3));
-          setAdminPendingCount(refreshResponse.data.length);
-        }
-      } else {
-        setAdminErrorMsg(response.message);
-      }
-    } catch (err: any) {
-      setAdminErrorMsg(getAdminErrorMessage(err, "Error occurred"));
-    }
-  };
-
-  const handleAdminRejectSubmit = async (e: React.FormEvent, id: number) => {
-    e.preventDefault();
-    if (!adminRejectionReason.trim()) {
-      setAdminErrorMsg(locale === "id" ? "Alasan penolakan wajib diisi." : "Rejection reason is required.");
-      return;
-    }
-    setAdminErrorMsg("");
-    setAdminSuccessMsg("");
-    try {
-      const response = await forumService.adminVerifyStory(id, {
-        status: "rejected",
-        rejection_reason: adminRejectionReason,
-      });
-      if (response.status === "success") {
-        setAdminSuccessMsg(locale === "id" ? "Cerita berhasil ditolak." : "Story rejected.");
-        setAdminRejectingStoryId(null);
-        setAdminRejectionReason("");
-        // Refresh admin data
-        const refreshResponse = await forumService.adminGetStories(1, 100, "pending");
-        if (refreshResponse.status === "success" && refreshResponse.data) {
-          setAdminPendingStories(refreshResponse.data.slice(0, 3));
-          setAdminPendingCount(refreshResponse.data.length);
-        }
-      } else {
-        setAdminErrorMsg(response.message);
-      }
-    } catch (err: any) {
-      setAdminErrorMsg(getAdminErrorMessage(err, "Error occurred"));
-    }
-  };
 
   // Translate variables
   const isId = locale === "id";
@@ -455,7 +417,7 @@ export default function Dashboard() {
           <div className="lg:col-span-5 bg-white border border-farm-border rounded-2xl p-6 shadow-sm flex flex-col justify-between">
             <div className="flex justify-between items-center border-b border-farm-border/60 pb-3 mb-4">
               <h3 className="text-xs font-bold text-farm-text uppercase tracking-wider">
-                {isId ? "Komunitas" : "Community"}
+                {isId ? "Cerita Komunitas" : "Community Forum"}
               </h3>
               <Link href="/forum" className="text-xs font-bold text-farm-green hover:underline">
                 {isId ? "Selengkapnya" : "See More"}
@@ -525,7 +487,7 @@ export default function Dashboard() {
               color: "bg-emerald-50 border-emerald-255",
             },
             {
-              title: isId ? "Komunitas" : "Community",
+              title: isId ? "Forum Komunitas" : "Community Forum",
               desc: isId ? "Bagikan ulasan cerita dan pengalaman jalan-jalan berkelanjutan Anda." : "Share your travel stories and experiences on our public board.",
               action: isId ? "Tulis Cerita" : "Write a Story",
               href: "/forum/new",
@@ -624,238 +586,142 @@ export default function Dashboard() {
   const renderAdminContent = () => {
     return (
       <div className="flex flex-col gap-8">
-        {/* Header greetings */}
         <div>
           <h1 className="font-serif text-3xl font-bold text-farm-text">
-            {isId ? `Selamat Pagi, Admin ${user?.nama}` : `Good Morning, Admin ${user?.nama}`}
+            {isId ? `Selamat Datang, Admin ${user?.nama || ''}` : `Welcome, Admin ${user?.nama || ''}`}
           </h1>
           <p className="text-sm text-farm-text-light mt-1 font-light">
             {isId
-              ? "Panel Kendali Utama Moderasi dan Pengaturan Konten Platform"
-              : "Main Control Panel for Platform Moderation and Content Management"}
+              ? "Ringkasan sistem dan metrik performa Farmstay Nusantara"
+              : "System overview and performance metrics for Farmstay Nusantara"}
           </p>
         </div>
 
-        {/* Admin Alerts & Status messages */}
-        {adminSuccessMsg && (
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800 font-medium animate-in fade-in duration-200">
-            {adminSuccessMsg}
-          </div>
-        )}
-        {adminErrorMsg && (
-          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800 font-medium animate-in fade-in duration-200">
-            {adminErrorMsg}
-          </div>
-        )}
-
-        {/* Quick Stats Grid */}
+        {/* Key Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Forum Stories Moderation count card */}
-          <div className="bg-white border border-farm-border rounded-2xl p-6 shadow-sm flex flex-col justify-between min-h-[170px] hover:border-farm-green transition-colors group">
-            <div>
+          {[
+            {
+              title: isId ? "Total Pengguna" : "Total Users",
+              value: isAdminLoading ? "..." : adminMetrics.totalUsers.toLocaleString(),
+              desc: isId ? "Pengguna terdaftar" : "Registered users",
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              ),
+              color: "bg-blue-50 border-blue-200",
+              href: "/admin/users",
+            },
+            {
+              title: isId ? "Total Farmstay" : "Total Farmstays",
+              value: isAdminLoading ? "..." : adminMetrics.totalFarmstays.toLocaleString(),
+              desc: isId ? "Listing farmstay" : "Farmstay listings",
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                </svg>
+              ),
+              color: "bg-emerald-50 border-emerald-200",
+              href: "/admin/farmstays",
+            },
+            {
+              title: isId ? "Konsultasi Aktif" : "Active Consultations",
+              value: isAdminLoading ? "..." : adminMetrics.pendingConsultations.toLocaleString(),
+              desc: isId ? "Sesi konsultasi terbuka" : "Open consultation sessions",
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.083.185.127.391.127.603v9.641a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V9.114c0-.212.044-.418.127-.603m16.24 0A2.25 2.25 0 0018 7.5H6a2.25 2.25 0 00-1.87 1.011m16.11 0l-7.79 5.192a1.875 1.875 0 01-2.08 0L3.89 8.511" />
+                </svg>
+              ),
+              color: "bg-amber-50 border-amber-200",
+              href: "/admin/consultations",
+            },
+            {
+              title: isId ? "Cerita Pending" : "Pending Stories",
+              value: isAdminLoading ? "..." : adminMetrics.pendingStories.toLocaleString(),
+              desc: isId ? "Menunggu verifikasi" : "Awaiting verification",
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                </svg>
+              ),
+              color: "bg-purple-50 border-purple-200",
+              href: "/admin/forum",
+            },
+          ].map((stat, idx) => (
+            <Link key={idx} href={stat.href} className={`p-6 border rounded-2xl flex flex-col justify-between shadow-sm bg-white hover:shadow-md transition-shadow ${stat.color}`}>
               <div className="flex justify-between items-start">
-                <span className="text-[10px] font-bold text-farm-gold uppercase tracking-wider">
-                  {isId ? "Moderasi Cerita" : "Stories Moderation"}
-                </span>
-                {adminPendingCount > 0 && (
-                  <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
-                )}
+                <div className="w-10 h-10 rounded-lg bg-white/60 flex items-center justify-center text-farm-text shrink-0">
+                  {stat.icon}
+                </div>
               </div>
-              <h2 className="font-serif text-3xl font-bold text-farm-text mt-3">
-                {isAdminLoading ? "..." : `${adminPendingCount}`}
-              </h2>
-              <p className="text-xs text-farm-text-light font-light mt-1">
-                {isId ? "Cerita menunggu verifikasi" : "Stories waiting for review"}
-              </p>
-            </div>
-            <Link
-              href="/forum?tab=moderation"
-              className="text-xs font-bold text-farm-green hover:underline mt-4 block"
-            >
-              {isId ? "Buka Antrean Moderasi →" : "Open Moderation Queue →"}
+              <div className="mt-4">
+                <h4 className="text-3xl font-bold text-farm-text">{stat.value}</h4>
+                <p className="text-xs font-semibold text-farm-text mt-1">{stat.title}</p>
+                <p className="text-[10px] text-farm-text-light mt-1">{stat.desc}</p>
+              </div>
             </Link>
-          </div>
-
-          {/* Guide settings card */}
-          <div className="bg-white border border-farm-border rounded-2xl p-6 shadow-sm flex flex-col justify-between min-h-[170px] hover:border-farm-green transition-colors">
-            <div>
-              <span className="text-[10px] font-bold text-farm-gold uppercase tracking-wider">
-                {isId ? "Panduan Website" : "Platform Guides"}
-              </span>
-              <h2 className="font-serif text-3xl font-bold text-farm-text mt-3">
-                Aktif
-              </h2>
-              <p className="text-xs text-farm-text-light font-light mt-1">
-                {isId ? "Konfigurasi FAQ & Panduan Dinamis" : "Dynamic Guide & FAQ setups"}
-              </p>
-            </div>
-            <Link
-              href="/dashboard/guide"
-              className="text-xs font-bold text-farm-green hover:underline mt-4 block"
-            >
-              {isId ? "Kelola Panduan →" : "Manage Guides →"}
-            </Link>
-          </div>
-
-          {/* Resources Hub card */}
-          <div className="bg-white border border-farm-border rounded-2xl p-6 shadow-sm flex flex-col justify-between min-h-[170px] hover:border-farm-green transition-colors">
-            <div>
-              <span className="text-[10px] font-bold text-farm-gold uppercase tracking-wider">
-                {isId ? "Materi & Dokumen" : "Learning Library"}
-              </span>
-              <h2 className="font-serif text-3xl font-bold text-farm-text mt-3">
-                12+
-              </h2>
-              <p className="text-xs text-farm-text-light font-light mt-1">
-                {isId ? "Materi pariwisata berkelanjutan" : "Sustainable tourism documents"}
-              </p>
-            </div>
-            <Link
-              href="/resources"
-              className="text-xs font-bold text-farm-green hover:underline mt-4 block"
-            >
-              {isId ? "Kelola Dokumen →" : "Manage Resources →"}
-            </Link>
-          </div>
-
-          {/* Consultation card */}
-          <div className="bg-white border border-farm-border rounded-2xl p-6 shadow-sm flex flex-col justify-between min-h-[170px] hover:border-farm-green transition-colors">
-            <div>
-              <span className="text-[10px] font-bold text-farm-gold uppercase tracking-wider">
-                {isId ? "Konsultasi Ahli" : "Consultations"}
-              </span>
-              <h2 className="font-serif text-3xl font-bold text-farm-text mt-3">
-                Chat
-              </h2>
-              <p className="text-xs text-farm-text-light font-light mt-1">
-                {isId ? "Pendampingan akomodasi owner" : "Support and expert consults"}
-              </p>
-            </div>
-            <Link
-              href="/dashboard/consultation"
-              className="text-xs font-bold text-farm-green hover:underline mt-4 block"
-            >
-              {isId ? "Buka Konsultasi →" : "View Consultation Live →"}
-            </Link>
-          </div>
+          ))}
         </div>
 
-        {/* Stories pending moderation list */}
-        <div className="bg-white border border-farm-border rounded-2xl p-6 shadow-sm">
-          <div className="flex justify-between items-center border-b border-farm-border/60 pb-3 mb-6">
-            <h3 className="text-xs font-bold text-farm-text uppercase tracking-wider">
-              {isId ? "Daftar Cerita Menunggu Persetujuan" : "Pending Stories Review List"}
-            </h3>
-            <Link
-              href="/forum?tab=moderation"
-              className="text-xs font-bold text-farm-green hover:underline"
-            >
-              {isId ? "Lihat Semua Antrean" : "View All Queue"}
-            </Link>
-          </div>
-
-          {isAdminLoading ? (
-            <div className="flex items-center justify-center p-12">
-              <div className="h-7 w-7 animate-spin rounded-full border-2 border-farm-green border-t-transparent" />
-            </div>
-          ) : adminPendingStories.length === 0 ? (
-            <div className="text-center p-12 text-sm text-farm-text-light font-light">
-              {isId ? "Semua cerita telah dimoderasi! Tidak ada antrean baru saat ini." : "All stories moderated! No new pending reviews in queue."}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {adminPendingStories.map((story) => (
-                <div
-                  key={story.id}
-                  className="border border-farm-border hover:border-farm-green rounded-xl overflow-hidden shadow-sm flex flex-col justify-between transition-all group bg-white"
-                >
-                  {/* Photo area */}
-                  <div className="h-40 bg-zinc-100 relative overflow-hidden shrink-0 border-b border-farm-border/40">
-                    {story.image_url ? (
-                      <img
-                        src={story.image_url}
-                        alt={story.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-farm-green-light/20 text-farm-green">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-12 h-12">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.008-.008a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-                        </svg>
-                      </div>
-                    )}
-                    <span className="absolute top-2 right-2 bg-purple-50 text-purple-800 border border-purple-200 text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded">
-                      PENDING
-                    </span>
-                  </div>
-
-                  {/* Body text area */}
-                  <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div>
-                      <span className="text-[9px] font-bold text-farm-gold uppercase tracking-wider block">
-                        By {story.author_name}
-                      </span>
-                      <h4 className="font-serif text-sm font-bold text-farm-text line-clamp-1 leading-snug mt-1 group-hover:text-farm-green transition-colors">
-                        {story.title}
-                      </h4>
-                      <p className="text-xs text-farm-text-light font-light line-clamp-2 mt-2 leading-relaxed">
-                        {story.content}
-                      </p>
-                    </div>
-
-                    {/* Inline verification controls */}
-                    <div className="mt-4 pt-4 border-t border-farm-border/60">
-                      {adminRejectingStoryId !== story.id ? (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleAdminApprove(story.id)}
-                            className="flex-1 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold transition-colors"
-                          >
-                            {isId ? "Setujui" : "Approve"}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setAdminRejectingStoryId(story.id);
-                              setAdminRejectionReason("");
-                            }}
-                            className="flex-1 h-8 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-semibold transition-colors"
-                          >
-                            {isId ? "Tolak" : "Reject"}
-                          </button>
-                        </div>
-                      ) : (
-                        <form onSubmit={(e) => handleAdminRejectSubmit(e, story.id)} className="space-y-2">
-                          <textarea
-                            value={adminRejectionReason}
-                            onChange={(e) => setAdminRejectionReason(e.target.value)}
-                            placeholder={isId ? "Alasan penolakan..." : "Rejection reason..."}
-                            required
-                            rows={2}
-                            className="w-full p-2 border border-farm-border rounded-lg bg-farm-cream text-xs focus:outline-none focus:ring-1 focus:ring-farm-green resize-none"
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              type="submit"
-                              className="flex-1 h-7 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[10px] font-semibold transition-colors"
-                            >
-                              {isId ? "Kirim" : "Submit"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setAdminRejectingStoryId(null)}
-                              className="px-2 h-7 rounded-lg border border-farm-border text-farm-text hover:bg-farm-cream text-[10px] font-semibold transition-colors"
-                            >
-                              {isId ? "Batal" : "Cancel"}
-                            </button>
-                          </div>
-                        </form>
-                      )}
-                    </div>
-                  </div>
+        {/* Quick Navigation grid for Admin */}
+        <div>
+          <h3 className="text-xs font-bold tracking-widest text-farm-text-light uppercase mb-4">
+            {isId ? "Manajemen Platform" : "Platform Management"}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                title: isId ? "Kelola Pengguna" : "Manage Users",
+                desc: isId ? "Data visitor dan pemilik" : "Visitor and owner data",
+                href: "/admin/users",
+              },
+              {
+                title: isId ? "Kepatuhan Standard" : "Compliance",
+                desc: isId ? "Review dokumen kepatuhan" : "Review compliance documents",
+                href: "/admin/compliance",
+              },
+              {
+                title: isId ? "Konsultasi Ahli" : "Consultation",
+                desc: isId ? "Balas sesi konsultasi" : "Reply to consultations",
+                href: "/admin/consultations",
+              },
+              {
+                title: isId ? "Penilaian Mandiri" : "Assessments",
+                desc: isId ? "Kelola pilar assessment" : "Manage assessment pillars",
+                href: "/admin/assessments",
+              },
+              {
+                title: isId ? "Profil Farmstay" : "Farmstays",
+                desc: isId ? "Kelola data farmstay" : "Manage farmstay data",
+                href: "/admin/farmstays",
+              },
+              {
+                title: isId ? "Materi & Dokumen" : "Resource",
+                desc: isId ? "Kelola artikel dan video" : "Manage articles and videos",
+                href: "/admin/resources",
+              },
+              {
+                title: isId ? "Verifikasi Forum" : "Forum Verification",
+                desc: isId ? "Moderasi post komunitas" : "Moderate community posts",
+                href: "/admin/forum",
+              },
+            ].map((link, idx) => (
+              <Link
+                key={idx}
+                href={link.href}
+                className="p-4 border rounded-xl hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-between h-28 bg-white border-zinc-200"
+              >
+                <div>
+                  <h4 className="text-xs font-extrabold text-farm-text leading-tight">{link.title}</h4>
+                  <p className="text-[10px] text-farm-text-light font-light mt-1 leading-snug">{link.desc}</p>
                 </div>
-              ))}
-            </div>
-          )}
+                <span className="text-[10px] font-bold text-farm-green hover:underline">
+                  {isId ? "Buka Manajemen →" : "Open Management →"}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -866,13 +732,15 @@ export default function Dashboard() {
       <Head>
         <title>
           {locale === "id"
-            ? `${user?.role === "admin" ? "Dashboard Admin" : (user?.role === "owner" ? "Dashboard Pemilik" : "Jelajah")} — Farmstay Nusantara`
-            : `${user?.role === "admin" ? "Admin Dashboard" : (user?.role === "owner" ? "Owner Dashboard" : "Explore")} — Farmstay Nusantara`}
+            ? `${user?.role === "admin" ? "Dashboard Admin" : user?.role === "owner" ? "Dashboard Pemilik" : "Jelajah"} — Farmstay Nusantara`
+            : `${user?.role === "admin" ? "Admin Dashboard" : user?.role === "owner" ? "Owner Dashboard" : "Explore"} — Farmstay Nusantara`}
         </title>
       </Head>
       {user?.role === "admin"
         ? renderAdminContent()
-        : (user?.role === "owner" ? renderOwnerContent() : renderVisitorContent())}
+        : user?.role === "owner"
+          ? renderOwnerContent()
+          : renderVisitorContent()}
     </DashboardLayout>
   );
 }

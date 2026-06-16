@@ -26,6 +26,7 @@ export interface Farmstay {
   category: FarmstayCategory;
   owner_id: number | null;
   image_url: string | null;
+  gallery?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -57,6 +58,7 @@ export interface AdminFarmstayPayload {
   category: FarmstayCategory;
   owner_id?: number | null;
   image_url?: string | null;
+  gallery?: string[];
 }
 
 export interface AdminMasterDataPayload {

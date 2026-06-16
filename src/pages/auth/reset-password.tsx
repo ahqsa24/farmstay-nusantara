@@ -80,9 +80,18 @@ export default function ResetPassword() {
   return (
     <GuestGuard>
       <div className="min-h-screen bg-farm-beige font-sans flex flex-col md:flex-row">
-        {/* Left Side: Solid Brand Panel (Gambar 1 style) */}
-        <div className="hidden md:flex md:w-[38%] bg-gradient-to-br from-farm-green to-farm-green-dark text-white p-12 flex-col justify-between shrink-0 sticky top-0 h-screen select-none border-r border-farm-border">
-          <div className="space-y-8">
+        {/* Left Side: Brand Panel with Background Image */}
+        <div
+          className="hidden md:flex md:w-[38%] text-white p-12 flex-col justify-between shrink-0 sticky top-0 h-screen select-none border-r border-farm-border relative overflow-hidden"
+          style={{
+            backgroundImage: "url('/images/hero_bg.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          {/* Green overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-farm-green/90 to-farm-green-dark/95 z-0" />
+          <div className="space-y-8 relative z-10">
             <Link href="/" className="inline-flex items-center text-xs font-bold text-farm-cream/80 hover:text-white border border-white/20 rounded-full px-4 py-1.5 hover:bg-white/10 transition-all">
               ← Kembali ke Beranda
             </Link>
@@ -106,7 +115,7 @@ export default function ResetPassword() {
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-6 text-[10px] font-light text-farm-cream/60">
+          <div className="border-t border-white/10 pt-6 text-[10px] font-light text-farm-cream/60 relative z-10">
             {t.footer.copyright}
           </div>
         </div>
@@ -151,9 +160,9 @@ export default function ResetPassword() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                   </svg>
                 </div>
-                <h3 className="font-serif text-xl font-bold text-farm-text">Password Reset Successfully</h3>
+                <h3 className="font-serif text-xl font-bold text-farm-text">{t.resetPassword?.title || "Password Reset Successfully"}</h3>
                 <p className="text-xs sm:text-sm text-farm-text-light font-light max-w-xs mx-auto leading-relaxed">
-                  Your password has been changed. You can now log in using your new credentials.
+                  {t.resetPassword?.successMsg || "Your password has been changed. You can now log in using your new credentials."}
                 </p>
                 <Link
                   href="/auth/login"
@@ -166,16 +175,16 @@ export default function ResetPassword() {
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="text-center mb-6">
                   <h2 className="font-serif text-2xl font-extrabold text-farm-text">
-                    Reset Password
+                    {t.resetPassword?.title || "Reset Password"}
                   </h2>
                   <p className="text-xs text-farm-text-light font-light mt-1">
-                    Set your new account password
+                    {t.resetPassword?.subtitle || "Set your new account password"}
                   </p>
                 </div>
 
                 <div>
                   <label htmlFor="password" className="block text-xs font-semibold text-farm-text">
-                    New Password
+                    {t.resetPassword?.newPassword || "New Password"}
                   </label>
                   <input
                     id="password"
@@ -199,7 +208,7 @@ export default function ResetPassword() {
 
                 <div>
                   <label htmlFor="confirmPassword" className="block text-xs font-semibold text-farm-text">
-                    Confirm New Password
+                    {t.resetPassword?.confirmNewPassword || "Confirm New Password"}
                   </label>
                   <input
                     id="confirmPassword"
@@ -230,7 +239,7 @@ export default function ResetPassword() {
                     {isLoading ? (
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                     ) : (
-                      "Reset Password"
+                      t.resetPassword?.resetBtn || "Reset Password"
                     )}
                   </button>
                 </div>

@@ -18,7 +18,7 @@ export const GuestGuard: React.FC<GuestGuardProps> = ({ children, fallback }) =>
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       // Get the redirect destination from URL or default based on role
-      const redirectUrl = (router.query.redirect as string) || (user?.role === "admin" ? "/admin/users" : "/dashboard");
+      const redirectUrl = (router.query.redirect as string) || "/dashboard";
       router.push(redirectUrl);
     }
   }, [isAuthenticated, isLoading, user, router]);

@@ -38,10 +38,33 @@ export const resourceService = {
   // ==========================================
 
   /**
+   * Admin: Fetch all resources including drafts and content
+   */
+  async adminGetResources(
+    page = 1,
+    limit = 10,
+    search = "",
+    type = ""
+  ): Promise<ApiResponse<Resource[]>> {
+    const query = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    if (search) query.append("search", search);
+    if (type) query.append("type", type);
+
+    const response = await apiClient.get<ApiResponse<Resource[]>>(
+      `/admin/resources?${query.toString()}`
+    );
+    return response.data;
+  },
+
+  /**
    * Admin: Add a new learning resource (supports PDF/media upload)
    */
   async adminCreateResource(payload: AdminResourcePayload | FormData): Promise<ApiResponse<any>> {
-    const headers = payload instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined;
+    // Let Axios set the Content-Type automatically for FormData to include the boundary
+    const headers = payload instanceof FormData ? undefined : undefined;
     const response = await apiClient.post<ApiResponse<any>>(
       "/admin/resources",
       payload,
@@ -57,7 +80,7 @@ export const resourceService = {
     id: number | string,
     payload: Partial<AdminResourcePayload> | FormData
   ): Promise<ApiResponse<any>> {
-    const headers = payload instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined;
+    const headers = payload instanceof FormData ? undefined : undefined;
     const response = await apiClient.put<ApiResponse<any>>(
       `/admin/resources/${id}`,
       payload,
