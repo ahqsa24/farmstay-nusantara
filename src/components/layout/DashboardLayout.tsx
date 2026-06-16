@@ -249,10 +249,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {/* Brand Logo & Title (Left) */}
               <div className="flex-1 lg:flex-none lg:w-48 xl:w-60 flex items-center justify-start">
                 <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0 group">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-farm-green text-white shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:bg-farm-green-hover">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 animate-pulse">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                    </svg>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden transition-all duration-300 group-hover:scale-105 shrink-0">
+                    <img src="/favicon.svg" alt="Farmstay Logo" className="h-full w-full object-contain" />
                   </div>
                   <div className="flex flex-col">
                     <span className="font-serif text-sm xl:text-base font-black leading-none text-farm-green tracking-tight transition-colors group-hover:text-farm-green-hover">
@@ -283,9 +281,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       >
                         <div className="shrink-0">{item.icon}</div>
                         <div
-                          className={`overflow-hidden transition-all duration-300 ease-in-out whitespace-nowrap flex items-center ${
-                            isActive ? "max-w-[150px] opacity-100" : "max-w-0 opacity-0 group-hover:max-w-[150px] group-hover:opacity-100"
-                          }`}
+                          className={`overflow-hidden transition-all duration-300 ease-in-out whitespace-nowrap flex items-center ${isActive ? "max-w-[150px] opacity-100" : "max-w-0 opacity-0 group-hover:max-w-[150px] group-hover:opacity-100"
+                            }`}
                         >
                           <span className="pl-2 pr-1 text-xs font-extrabold">{item.name}</span>
                         </div>
@@ -306,9 +303,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         </svg>
                       </div>
                       <div
-                        className={`overflow-hidden transition-all duration-300 ease-in-out whitespace-nowrap flex items-center ${
-                          router.pathname.startsWith("/forum") ? "max-w-[150px] opacity-100" : "max-w-0 opacity-0 group-hover:max-w-[150px] group-hover:opacity-100"
-                        }`}
+                        className={`overflow-hidden transition-all duration-300 ease-in-out whitespace-nowrap flex items-center ${router.pathname.startsWith("/forum") ? "max-w-[150px] opacity-100" : "max-w-0 opacity-0 group-hover:max-w-[150px] group-hover:opacity-100"
+                          }`}
                       >
                         <span className="pl-2 pr-1 text-xs font-extrabold">{isId ? "Komunitas" : "Community"}</span>
                       </div>
@@ -369,8 +365,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           </p>
                         )}
                       </div>
-                      
+
                       <div className="py-1 bg-white">
+                        <Link
+                          href="/"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-farm-text hover:bg-farm-beige transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-farm-text-light">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12.75 15l3-3m0 0l-3-3m3 3h-7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Landing Page</span>
+                        </Link>
                         <Link
                           href="/dashboard/profile"
                           onClick={() => setIsDropdownOpen(false)}
@@ -502,7 +508,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Desktop Main Centered Content */}
         <main className="flex-1 w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 py-8 md:py-10">
-          {children}
+          <div className="w-full lg:w-[80%] mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </AuthGuard>

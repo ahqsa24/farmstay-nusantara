@@ -49,8 +49,7 @@ export default function Login() {
           locale === "id" ? "Login berhasil! Selamat datang kembali." : "Login successful! Welcome back.",
           "success"
         );
-        const redirectUrl = (router.query.redirect as string) || "/dashboard";
-        router.push(redirectUrl);
+        router.push("/dashboard");
       } else {
         setGeneralError(t.login.invalidCredentials);
       }

@@ -249,7 +249,7 @@ export default function ConsultationPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto flex flex-col gap-8 h-[calc(100vh-140px)]">
+      <div className="w-full flex flex-col gap-8 h-[calc(100vh-140px)]">
         {/* Header Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-farm-border/60 pb-4 shrink-0 gap-4">
           <div>

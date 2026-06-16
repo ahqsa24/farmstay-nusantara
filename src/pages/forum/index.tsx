@@ -225,7 +225,7 @@ export default function ForumPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto flex flex-col gap-8">
+      <div className="w-full flex flex-col gap-8">
         {/* Header Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-farm-border/60 pb-5 gap-4">
           <div>

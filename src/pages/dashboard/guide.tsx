@@ -50,7 +50,7 @@ export default function GuidePage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto flex flex-col gap-6">
+      <div className="w-full flex flex-col gap-6">
         
         {/* Hero Banner Card */}
         <div className="bg-[#122A23] rounded-2xl p-8 relative overflow-hidden shadow-lg">

@@ -190,7 +190,7 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto flex flex-col gap-8">
+      <div className="w-full flex flex-col gap-8">
           {/* Header & Back Button */}
           <div className="flex items-center justify-between border-b border-farm-border/60 pb-5">
             <div>

@@ -16,6 +16,24 @@ export default function Dashboard() {
   const { user, profile } = useAuth();
   const router = useRouter();
   const { t, locale } = useTranslation();
+  const isId = locale === "id";
+
+  const [greeting, setGreeting] = useState(isId ? "Selamat Pagi" : "Good Morning");
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    let g = "";
+    if (hour >= 4 && hour < 11) {
+      g = isId ? "Selamat Pagi" : "Good Morning";
+    } else if (hour >= 11 && hour < 15) {
+      g = isId ? "Selamat Siang" : "Good Afternoon";
+    } else if (hour >= 15 && hour < 18) {
+      g = isId ? "Selamat Sore" : "Good Afternoon";
+    } else {
+      g = isId ? "Selamat Malam" : "Good Evening";
+    }
+    setGreeting(g);
+  }, [locale]);
 
   // Metrics states
   const [complianceProgress, setComplianceProgress] = useState(0);
@@ -121,7 +139,6 @@ export default function Dashboard() {
   }, [user]);
 
   // Translate variables
-  const isId = locale === "id";
 
   // ----------------------------------------------------
   // 1. OWNER DASHBOARD CONTENT VIEW
@@ -134,7 +151,7 @@ export default function Dashboard() {
         {/* Header greetings */}
         <div>
           <h1 className="font-serif text-3xl font-bold text-farm-text">
-            {isId ? `Selamat Pagi, ${user?.nama}` : `Good Morning, ${user?.nama}`}
+            {`${greeting}, ${user?.nama || ""}`}
           </h1>
           <p className="text-sm text-farm-text-light mt-1 font-light">
             {isId

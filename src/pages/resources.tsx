@@ -147,7 +147,7 @@ export default function ResourcesPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto flex flex-col gap-8">
+      <div className="w-full flex flex-col gap-8">
         {/* Header Title */}
         <div className="border-b border-farm-border/60 pb-5">
           <h1 className="font-serif text-3xl font-bold text-farm-text">{labels.title}</h1>

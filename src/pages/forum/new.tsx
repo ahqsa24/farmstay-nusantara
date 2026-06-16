@@ -115,7 +115,7 @@ export default function NewStoryPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-3xl mx-auto flex flex-col gap-6">
+      <div className="w-full flex flex-col gap-6">
         {/* Title Back navigation */}
         <div>
           <Link href="/forum" className="text-xs font-bold text-farm-green hover:underline">

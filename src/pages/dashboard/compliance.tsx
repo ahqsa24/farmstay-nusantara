@@ -225,7 +225,7 @@ export default function CompliancePage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto flex flex-col gap-8">
+      <div className="w-full flex flex-col gap-8">
         {/* Header Title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-farm-border/60 pb-5 gap-4">
           <div>
