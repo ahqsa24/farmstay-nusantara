@@ -4,11 +4,14 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import RoleGuard from "@/components/guards/RoleGuard";
 import { assessmentService } from "@/services/assessmentService";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useToast } from "@/contexts/ToastContext";
+import * as XLSX from "xlsx";
 
 type ViewLevel = "pillars" | "criteria" | "questions";
 
 export default function AdminAssessmentsPage() {
   const { locale } = useTranslation();
+  const { showToast } = useToast();
   const isId = locale === "id";
 
   const [pillars, setPillars] = useState<any[]>([]);
@@ -69,6 +72,57 @@ export default function AdminAssessmentsPage() {
         setSubmissions(Array.isArray(res.data) ? res.data : res.data?.data || []);
       }
     } catch (e) { console.error(e); }
+  };
+
+  const handleDownloadUserExcel = async (userId: number, userName: string) => {
+    try {
+      showToast(isId ? "Menyiapkan file Excel..." : "Preparing Excel file...", "info");
+      
+      const res = await assessmentService.adminGetResponses(1, 1000);
+      let userResponses = [];
+      if (res.status === "success" && res.data) {
+        const allData = Array.isArray(res.data) ? res.data : res.data?.data || [];
+        userResponses = allData.filter((r: any) => r.user?.id === userId);
+      }
+      
+      if (userResponses.length === 0) {
+        showToast(isId ? "Tidak ada jawaban ditemukan untuk user ini." : "No answers found for this user.", "error");
+        return;
+      }
+
+      const excelData = userResponses.map((r: any, index: number) => ({
+        "No": index + 1,
+        "Pilar": r.question?.criteria?.pillar?.name || r.pillar?.name || "-",
+        "Kriteria": r.question?.criteria?.name || "-",
+        "Pertanyaan": r.question?.question_text || "-",
+        "Jawaban Terpilih": r.option?.label || "-",
+        "Skor": r.score || 0,
+        "Tanggal Submit": r.created_at ? new Date(r.created_at).toLocaleString() : "-",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Jawaban Assessment");
+
+      ws['!cols'] = [
+        { wch: 5 },  // No
+        { wch: 20 }, // Pilar
+        { wch: 30 }, // Kriteria
+        { wch: 60 }, // Pertanyaan
+        { wch: 35 }, // Jawaban
+        { wch: 10 }, // Skor
+        { wch: 20 }, // Tanggal
+      ];
+
+      const safeName = userName.replace(/[^a-zA-Z0-9]/g, '_');
+      const dateStr = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `Audit_Jawaban_${safeName}_${dateStr}.xlsx`);
+      
+      showToast(isId ? "Berhasil mengunduh Excel." : "Successfully downloaded Excel.", "success");
+    } catch (error) {
+      console.error(error);
+      showToast(isId ? "Gagal mengunduh Excel." : "Failed to download Excel.", "error");
+    }
   };
 
   useEffect(() => { fetchPillars(); fetchSubmissions(); }, [responsePage]);
@@ -365,11 +419,12 @@ export default function AdminAssessmentsPage() {
                       <th className="text-left px-5 py-3 font-semibold text-farm-text text-xs uppercase">{isId ? "Pilar" : "Pillar"}</th>
                       <th className="text-left px-5 py-3 font-semibold text-farm-text text-xs uppercase">{isId ? "Skor" : "Score"}</th>
                       <th className="text-left px-5 py-3 font-semibold text-farm-text text-xs uppercase">{isId ? "Tanggal" : "Date"}</th>
+                      <th className="text-center px-5 py-3 font-semibold text-farm-text text-xs uppercase">{isId ? "Aksi" : "Action"}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {submissions.length === 0 ? (
-                      <tr><td colSpan={5} className="text-center py-12 text-farm-text-light text-sm">{isId ? "Belum ada jawaban." : "No submissions found."}</td></tr>
+                      <tr><td colSpan={6} className="text-center py-12 text-farm-text-light text-sm">{isId ? "Belum ada jawaban." : "No submissions found."}</td></tr>
                     ) : submissions.map((s: any, idx: number) => (
                       <tr key={s.id || idx} className="border-b border-farm-border/50 hover:bg-farm-beige/30 transition-colors">
                         <td className="px-5 py-3 text-farm-text-light">#{s.id || idx + 1}</td>
@@ -378,6 +433,20 @@ export default function AdminAssessmentsPage() {
                         <td className="px-5 py-3"><span className="font-bold text-farm-green">{s.score || s.percentage || "-"}</span></td>
                         <td className="px-5 py-3 text-farm-text-light text-xs">
                           {s.created_at ? new Date(s.created_at).toLocaleDateString() : "-"}
+                        </td>
+                        <td className="px-5 py-3 text-center">
+                          {s.user?.id ? (
+                            <button 
+                              onClick={() => handleDownloadUserExcel(s.user.id, s.user.nama || "User")}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-[10px] rounded-lg transition-colors border border-emerald-200"
+                              title={isId ? "Unduh detail jawaban user ini" : "Download user details"}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                              Excel
+                            </button>
+                          ) : (
+                            <span className="text-farm-text-light text-[10px]">-</span>
+                          )}
                         </td>
                       </tr>
                     ))}

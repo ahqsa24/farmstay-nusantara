@@ -18,6 +18,7 @@ export default function Home() {
   const { t, locale, router } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const { user, profile, logout, isAuthenticated } = useAuth();
   const { showToast } = useToast();
@@ -57,6 +58,22 @@ export default function Home() {
   const handleSplashComplete = () => {
     sessionStorage.setItem("hasSeenSplash", "true");
     setShowSplash(false);
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 400) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const changeLanguage = (newLocale: "en" | "id") => {
@@ -556,6 +573,20 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Scroll to Top Button */}
+      <button
+        onClick={scrollToTop}
+        className={`fixed bottom-6 right-6 z-50 p-3.5 rounded-full bg-farm-green text-white shadow-xl hover:bg-farm-green-hover transition-all duration-300 transform flex items-center justify-center ${
+          showScrollTop ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0 pointer-events-none"
+        }`}
+        aria-label="Scroll to top"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+        </svg>
+      </button>
+
       </div>
     </>
   );

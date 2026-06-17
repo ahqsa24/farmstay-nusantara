@@ -46,6 +46,7 @@ export default function AdminConsultationsPage() {
       const res = await consultationService.getMessages(session.id);
       if (res.status === "success" && res.data) {
         setMessages(Array.isArray(res.data) ? res.data : (res.data as any).messages || []);
+        window.dispatchEvent(new Event("consultationRead"));
       }
     } catch (e) {
       console.error("Failed to load messages:", e);
@@ -257,38 +258,46 @@ export default function AdminConsultationsPage() {
                       </div>
                     ) : (
                       messages.map((m: any, idx: number) => {
-                        const isAdmin = m.sender?.role?.name === "admin" || m.sender_id === selectedSession?.admin_id;
+                        const isAdmin = m.sender?.role === "admin";
                         return (
-                          <div key={m.id || idx} className={`flex flex-col max-w-[85%] animate-slide-up ${isAdmin ? "self-end items-end" : "self-start items-start"}`}>
-                            {!isAdmin && (
-                              <span className="text-[9px] font-bold text-farm-gold uppercase px-1 mb-1">
-                                {m.sender?.nama || "User"} (User)
-                              </span>
-                            )}
-                            <div className={`px-4 py-3 text-sm shadow-sm ${
-                              isAdmin 
-                                ? "bg-gradient-to-br from-farm-green to-farm-green-hover text-white rounded-2xl rounded-tr-sm" 
-                                : "bg-white border border-farm-border text-farm-text rounded-2xl rounded-tl-sm"
-                            }`}>
-                              <p className="whitespace-pre-wrap">{m.message}</p>
-                              
-                              {/* Attachment if exists */}
-                              {m.attachment && (
-                                <div className={`flex items-center gap-1.5 mt-2.5 pt-2 border-t text-[10px] font-bold ${
-                                  isAdmin ? "border-white/20 text-white" : "border-farm-border/60 text-farm-green"
+                          <div key={m.id || idx} className={`flex w-full animate-slide-up ${isAdmin ? "justify-end" : "justify-start"}`}>
+                            <div className={`flex gap-3 max-w-[85%] ${isAdmin ? "flex-row-reverse" : "flex-row"}`}>
+                              {/* Avatar */}
+                              <div className={`h-8 w-8 rounded-full border shadow-sm flex items-center justify-center shrink-0 font-bold text-xs text-white ${isAdmin ? "bg-farm-green border-farm-green" : "bg-farm-gold border-farm-gold"}`}>
+                                {m.sender?.nama ? m.sender.nama.substring(0, 1).toUpperCase() : (isAdmin ? "A" : "U")}
+                              </div>
+
+                              <div className={`flex flex-col ${isAdmin ? "items-end" : "items-start"}`}>
+                                <span className={`text-[9px] font-bold uppercase px-1 mb-1 ${isAdmin ? "text-farm-green" : "text-farm-gold"}`}>
+                                  {m.sender?.nama || (isAdmin ? "Admin" : "User")} ({m.sender?.role || (isAdmin ? "Admin" : "Owner")})
+                                </span>
+                                
+                                <div className={`px-4 py-3 text-sm shadow-sm ${
+                                  isAdmin 
+                                    ? "bg-gradient-to-br from-farm-green to-farm-green-hover text-white rounded-2xl rounded-tr-sm" 
+                                    : "bg-white border border-farm-border text-farm-text rounded-2xl rounded-tl-sm"
                                 }`}>
-                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-                                  </svg>
-                                  <a href={m.attachment} target="_blank" rel="noreferrer" className="hover:underline">
-                                    Attachment
-                                  </a>
+                                  <p className="whitespace-pre-wrap">{m.message}</p>
+                                  
+                                  {/* Attachment if exists */}
+                                  {m.attachment && (
+                                    <div className={`flex items-center gap-1.5 mt-2.5 pt-2 border-t text-[10px] font-bold ${
+                                      isAdmin ? "border-white/20 text-white" : "border-farm-border/60 text-farm-green"
+                                    }`}>
+                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                                      </svg>
+                                      <a href={m.attachment} target="_blank" rel="noreferrer" className="hover:underline">
+                                        Attachment
+                                      </a>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                                <span className="text-[10px] mt-1.5 px-1 font-medium text-farm-text-light/60">
+                                  {m.created_at ? new Date(m.created_at).toLocaleTimeString(isId ? "id-ID" : "en-US", { hour: "2-digit", minute: "2-digit" }) : ""}
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-[10px] mt-1.5 px-1 font-medium text-farm-text-light/60">
-                              {m.created_at ? new Date(m.created_at).toLocaleTimeString(isId ? "id-ID" : "en-US", { hour: "2-digit", minute: "2-digit" }) : ""}
-                            </span>
                           </div>
                         );
                       })

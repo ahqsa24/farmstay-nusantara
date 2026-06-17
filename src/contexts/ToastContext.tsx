@@ -12,7 +12,9 @@ interface ToastContextType {
   showToast: (message: string, type?: ToastType) => void;
 }
 
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
+const ToastContext = createContext<ToastContextType>({
+  showToast: () => {},
+});
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -104,6 +106,5 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 export function useToast(): ToastContextType {
   const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error("useToast must be used within ToastProvider");
   return ctx;
 }
