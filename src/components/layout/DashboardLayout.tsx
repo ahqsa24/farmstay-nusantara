@@ -5,9 +5,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useToast } from "@/contexts/ToastContext";
 import AuthGuard from "@/components/guards/AuthGuard";
+import { consultationService } from "@/services/consultationService";
+import { forumService } from "@/services/forumService";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+}
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ReactNode;
+  badge?: number;
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -16,8 +25,68 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { showToast } = useToast();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [pendingConsultations, setPendingConsultations] = useState(0);
+  const [pendingForums, setPendingForums] = useState(0);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      const fetchCounts = async () => {
+        try {
+          const [consultationsRes, forumsRes] = await Promise.all([
+            consultationService.adminGetSessions(1, 100, "", ""),
+            forumService.adminGetStories(1, 100, "pending"),
+          ]);
+          if (consultationsRes.status === "success" && consultationsRes.data) {
+            const sessions = Array.isArray(consultationsRes.data) ? consultationsRes.data : (consultationsRes.data as any).data || [];
+            const unreadCount = sessions.filter((s: any) => s.has_new_message).length;
+            setPendingConsultations(unreadCount);
+          }
+          if (forumsRes.status === "success" && forumsRes.data) {
+            setPendingForums(Array.isArray(forumsRes.data) ? forumsRes.data.length : (forumsRes.data as any).data?.length || 0);
+          }
+        } catch (err) {
+          console.error("Failed to fetch notification counts", err);
+        }
+      };
+      
+      fetchCounts();
+      const intervalId = setInterval(fetchCounts, 60000); // Poll every minute
+      
+      const handleRead = () => fetchCounts();
+      window.addEventListener("consultationRead", handleRead);
+      
+      return () => {
+        clearInterval(intervalId);
+        window.removeEventListener("consultationRead", handleRead);
+      };
+    } else if (user?.role === "owner") {
+      const fetchCounts = async () => {
+        try {
+          const consultationsRes = await consultationService.getSessions();
+          if (consultationsRes.status === "success" && consultationsRes.data) {
+            const sessions = Array.isArray(consultationsRes.data) ? consultationsRes.data : (consultationsRes.data as any).data || [];
+            const unreadCount = sessions.filter((s: any) => s.has_new_message).length;
+            setPendingConsultations(unreadCount);
+          }
+        } catch (err) {
+          console.error("Failed to fetch notification counts", err);
+        }
+      };
+      
+      fetchCounts();
+      const intervalId = setInterval(fetchCounts, 60000); // Poll every minute
+      
+      const handleRead = () => fetchCounts();
+      window.addEventListener("consultationRead", handleRead);
+
+      return () => {
+        clearInterval(intervalId);
+        window.removeEventListener("consultationRead", handleRead);
+      };
+    }
+  }, [user?.role]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -45,7 +114,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const isId = locale === "id";
 
   // Navigation items based on role
-  const ownerNavItems = [
+  const ownerNavItems: NavItem[] = [
     {
       name: isId ? "Dashboard" : "Dashboard",
       href: "/dashboard",
@@ -76,6 +145,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     {
       name: isId ? "Konsultasi Ahli" : "Consultation",
       href: "/dashboard/consultation",
+      badge: pendingConsultations,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
           <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.083.185.127.391.127.603v9.641a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V9.114c0-.212.044-.418.127-.603m16.24 0A2.25 2.25 0 0018 7.5H6a2.25 2.25 0 00-1.87 1.011m16.11 0l-7.79 5.192a1.875 1.875 0 01-2.08 0L3.89 8.511" />
@@ -102,7 +172,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     },
   ];
 
-  const adminNavItems = [
+  const adminNavItems: NavItem[] = [
     {
       name: isId ? "Dashboard Admin" : "Admin Dashboard",
       href: "/dashboard",
@@ -142,6 +212,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     {
       name: isId ? "Konsultasi Ahli" : "Consultation",
       href: "/admin/consultations",
+      badge: pendingConsultations,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
           <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.083.185.127.391.127.603v9.641a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V9.114c0-.212.044-.418.127-.603m16.24 0A2.25 2.25 0 0018 7.5H6a2.25 2.25 0 00-1.87 1.011m16.11 0l-7.79 5.192a1.875 1.875 0 01-2.08 0L3.89 8.511" />
@@ -160,6 +231,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     {
       name: isId ? "Verifikasi Forum" : "Forum Verification",
       href: "/admin/forum",
+      badge: pendingForums,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
           <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
@@ -185,6 +257,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ),
     },
     {
+      name: isId ? "Chatbot" : "Chatbot",
+      href: "/admin/chatbot",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v2" />
+          <circle cx="12" cy="4" r="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="5" y="8" width="14" height="12" rx="3.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 11.5C3.5 11.5 2.5 12.5 2.5 14S3.5 16.5 5 16.5" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 11.5c1.5 0 2.5 1 2.5 2.5S20.5 16.5 19 16.5" />
+          <circle cx="9" cy="13.5" r="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="15" cy="13.5" r="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 17c1 .8 2 1 2.5 1s1.5-.2 2.5-1" />
+        </svg>
+      ),
+    },
+    {
       name: isId ? "Master Data" : "Master Data",
       href: "/admin/master-data",
       icon: (
@@ -195,7 +283,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     },
   ];
 
-  const visitorNavItems = [
+  const visitorNavItems: NavItem[] = [
     {
       name: isId ? "Jelajah" : "Explore",
       href: "/dashboard",
@@ -274,12 +362,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={`group flex items-center p-2 rounded-lg transition-all ${isActive
+                        className={`group flex relative items-center p-2 rounded-lg transition-all ${isActive
                           ? "bg-farm-green text-white shadow-sm"
                           : "text-farm-text-light hover:text-farm-text hover:bg-farm-border/30"
                           }`}
                       >
-                        <div className="shrink-0">{item.icon}</div>
+                        <div className="shrink-0 relative">
+                          {item.icon}
+                          {item.badge ? (
+                            <span className={`absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] px-0.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ${isActive ? 'ring-farm-green' : 'ring-farm-cream group-hover:ring-farm-border/30'}`}>
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          ) : null}
+                        </div>
                         <div
                           className={`overflow-hidden transition-all duration-300 ease-in-out whitespace-nowrap flex items-center ${isActive ? "max-w-[150px] opacity-100" : "max-w-0 opacity-0 group-hover:max-w-[150px] group-hover:opacity-100"
                             }`}
@@ -467,11 +562,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 h-10 px-3 text-sm font-semibold rounded-lg transition-colors ${isActive ? "bg-farm-green text-white" : "text-farm-text/80 hover:bg-farm-border/30"
+                  className={`flex items-center justify-between h-10 px-3 text-sm font-semibold rounded-lg transition-colors ${isActive ? "bg-farm-green text-white" : "text-farm-text/80 hover:bg-farm-border/30"
                     }`}
                 >
-                  {item.icon}
-                  <span>{item.name}</span>
+                  <div className="flex items-center gap-3">
+                    {item.icon}
+                    <span>{item.name}</span>
+                  </div>
+                  {item.badge ? (
+                    <span className="flex h-5 items-center justify-center rounded-full bg-red-500 px-2 text-[10px] font-bold text-white shadow-sm">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}

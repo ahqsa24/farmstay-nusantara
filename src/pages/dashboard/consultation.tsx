@@ -113,7 +113,8 @@ export default function ConsultationPage() {
     try {
       const response = await consultationService.getMessages(sessionId);
       if (response.status === "success" && response.data) {
-        setMessages(response.data);
+        setMessages(Array.isArray(response.data) ? response.data : (response.data as any).messages || []);
+        window.dispatchEvent(new Event("consultationRead"));
       }
     } catch (err) {
       console.error("Failed to load messages:", err);
@@ -380,49 +381,54 @@ export default function ConsultationPage() {
                       {labels.noMessages}
                     </div>
                   ) : (
-                    messages.map((msg) => {
+                    messages.map((msg: any, idx: number) => {
                       // Check if message is from the user (Sender roles matching or ID check)
-                      const isMe = msg.sender_id === user?.id || msg.sender_role === user?.role;
+                      const isMe = msg.sender?.id === user?.id || msg.sender?.role === user?.role;
+                      const attachment = msg.attachment || msg.attachment_url;
                       return (
                         <div
-                          key={msg.id}
-                          className={`flex ${isMe ? "justify-end" : "justify-start"} w-full`}
+                          key={msg.id || idx}
+                          className={`flex w-full animate-slide-up ${isMe ? "justify-end" : "justify-start"}`}
                         >
-                          <div className={`flex flex-col max-w-[70%] gap-1`}>
-                            {/* Sender Info */}
-                            {!isMe && (
-                              <span className="text-[9px] font-bold text-farm-gold uppercase px-1">
-                                {msg.sender_name} ({msg.sender_role})
-                              </span>
-                            )}
-                            
-                            {/* Bubble Card */}
-                            <div className={`p-3.5 rounded-2xl border text-xs leading-relaxed shadow-sm ${
-                              isMe
-                                ? "bg-farm-green text-white border-farm-green rounded-tr-none"
-                                : "bg-white text-farm-text border-farm-border rounded-tl-none"
-                            }`}>
-                              <p className="whitespace-pre-wrap">{msg.message}</p>
-                              
-                              {/* Attachment */}
-                              {msg.attachment_url && (
-                                <div className={`flex items-center gap-1.5 mt-2.5 pt-2 border-t text-[10px] font-bold ${
-                                  isMe ? "border-white/20 text-white" : "border-farm-border/60 text-farm-green"
-                                }`}>
-                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-                                  </svg>
-                                  <a href={msg.attachment_url} target="_blank" rel="noreferrer" className="hover:underline">
-                                    {labels.attachmentLabel} {msg.attachment_url.split("/").pop()}
-                                  </a>
-                                </div>
-                              )}
+                          <div className={`flex gap-3 max-w-[85%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                            {/* Avatar */}
+                            <div className={`h-8 w-8 rounded-full border shadow-sm flex items-center justify-center shrink-0 font-bold text-xs text-white ${isMe ? "bg-farm-green border-farm-green" : "bg-farm-gold border-farm-gold"}`}>
+                              {msg.sender?.nama ? msg.sender.nama.substring(0, 1).toUpperCase() : (isMe ? "U" : "A")}
                             </div>
 
-                            {/* Timestamp */}
-                            <span className={`text-[9px] text-farm-text-light px-1 ${isMe ? "text-right" : "text-left"}`}>
-                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                            <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                              <span className={`text-[9px] font-bold uppercase px-1 mb-1 ${isMe ? "text-farm-green" : "text-farm-gold"}`}>
+                                {msg.sender?.nama || (isMe ? "User" : "Admin")} ({msg.sender?.role || (isMe ? "Owner" : "Admin")})
+                              </span>
+                              
+                              {/* Bubble Card */}
+                              <div className={`px-4 py-3 text-sm shadow-sm ${
+                                isMe
+                                  ? "bg-gradient-to-br from-farm-green to-farm-green-hover text-white rounded-2xl rounded-tr-sm"
+                                  : "bg-white border border-farm-border text-farm-text rounded-2xl rounded-tl-sm"
+                              }`}>
+                                <p className="whitespace-pre-wrap">{msg.message}</p>
+                                
+                                {/* Attachment */}
+                                {attachment && (
+                                  <div className={`flex items-center gap-1.5 mt-2.5 pt-2 border-t text-[10px] font-bold ${
+                                    isMe ? "border-white/20 text-white" : "border-farm-border/60 text-farm-green"
+                                  }`}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                                    </svg>
+                                    <a href={attachment} target="_blank" rel="noreferrer" className="hover:underline">
+                                      {labels.attachmentLabel} Attachment
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Timestamp */}
+                              <span className={`text-[10px] mt-1.5 px-1 font-medium text-farm-text-light/60`}>
+                                {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );

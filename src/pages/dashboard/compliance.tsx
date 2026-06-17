@@ -10,6 +10,9 @@ import {
   SubIndicatorCompliance,
 } from "@/types/compliance";
 
+import JourneyMap from "@/components/gamification/JourneyMap";
+import LevelProgress from "@/components/gamification/LevelProgress";
+
 export default function CompliancePage() {
   const { user } = useAuth();
   const { t, locale } = useTranslation();
@@ -42,56 +45,56 @@ export default function CompliancePage() {
   // Translatable terms
   const labels = {
     id: {
-      title: "Kepatuhan Standar",
-      subtitle: "Evaluasi kepatuhan akomodasi Anda terhadap standar keberlanjutan",
-      overallProgress: "Kemajuan Kepatuhan Keseluruhan",
-      selectPillar: "Pilih pilar untuk melihat kriteria & sub-indikator:",
-      statusNotStarted: "Belum Dimulai",
-      statusInProgress: "Dalam Proses",
-      statusCompleted: "Selesai",
-      criteriaTitle: "Kriteria",
-      subIndicators: "Sub-Indikator Kepatuhan",
-      uploadEvidence: "Kirim Bukti Kepatuhan",
-      evidenceDesc: "Deskripsi Jawaban / Penjelasan",
-      evidenceFileLabel: "File Bukti (Gambar/PDF)",
-      evidenceUrlLabel: "Link URL Bukti",
+      title: "Papan Tugas Pertanian",
+      subtitle: "Kumpulkan bukti untuk menyelesaikan tugas di setiap area pertanian",
+      overallProgress: "Progress Tugas Keseluruhan",
+      selectPillar: "Peta Perjalanan:",
+      statusNotStarted: "Belum Dikerjakan",
+      statusInProgress: "Dalam Pengerjaan",
+      statusCompleted: "Tugas Selesai",
+      criteriaTitle: "Daftar Tugas",
+      subIndicators: "Rincian Tugas",
+      uploadEvidence: "Serahkan Barang Bukti",
+      evidenceDesc: "Catatan Petani / Penjelasan",
+      evidenceFileLabel: "File Barang Bukti (Gambar/PDF)",
+      evidenceUrlLabel: "Tautan URL Bukti",
       dragDrop: "Klik untuk memilih file",
-      exampleDoc: "Dokumen Contoh",
-      viewExample: "Pratinjau Contoh",
-      submitBtn: "Kirim Bukti",
-      activityLog: "Riwayat Aktivitas",
+      exampleDoc: "Dokumen Panduan",
+      viewExample: "Lihat Panduan",
+      submitBtn: "Serahkan Bukti",
+      activityLog: "Riwayat Perjalanan",
       close: "Tutup",
-      evidenceSubmitted: "Bukti berhasil dikirim!",
+      evidenceSubmitted: "Bukti berhasil diserahkan!",
       selectFilePrompt: "Silakan pilih file terlebih dahulu.",
-      selectUrlPrompt: "Silakan masukkan URL terlebih dahulu.",
-      submittedEvidence: "Bukti yang dikirim:",
-      answerLabel: "Jawaban:",
+      selectUrlPrompt: "Silakan masukkan tautan URL terlebih dahulu.",
+      submittedEvidence: "Bukti yang Diserahkan:",
+      answerLabel: "Catatan:",
     },
     en: {
-      title: "Standard Compliance",
-      subtitle: "Evaluate your farmstay sustainability standards compliance",
-      overallProgress: "Overall Compliance Progress",
-      selectPillar: "Select a pillar to view its criteria & sub-indicators:",
+      title: "Farm Task Board",
+      subtitle: "Collect evidence to complete tasks in each farm area",
+      overallProgress: "Overall Task Progress",
+      selectPillar: "Journey Map:",
       statusNotStarted: "Not Started",
       statusInProgress: "In Progress",
-      statusCompleted: "Completed",
-      criteriaTitle: "Criteria",
-      subIndicators: "Compliance Sub-Indicators",
-      uploadEvidence: "Submit Compliance Evidence",
-      evidenceDesc: "Answer / Explanation Description",
+      statusCompleted: "Task Completed",
+      criteriaTitle: "Task List",
+      subIndicators: "Task Details",
+      uploadEvidence: "Hand In Evidence",
+      evidenceDesc: "Farmer's Note / Explanation",
       evidenceFileLabel: "Evidence File (Image/PDF)",
       evidenceUrlLabel: "Evidence URL Link",
       dragDrop: "Click to select a file",
-      exampleDoc: "Example Document",
-      viewExample: "Preview Example",
-      submitBtn: "Submit Evidence",
-      activityLog: "Activity Log",
+      exampleDoc: "Guide Document",
+      viewExample: "View Guide",
+      submitBtn: "Hand In",
+      activityLog: "Journey Log",
       close: "Close",
       evidenceSubmitted: "Evidence submitted successfully!",
       selectFilePrompt: "Please select a file first.",
       selectUrlPrompt: "Please input a URL first.",
-      submittedEvidence: "Submitted evidence:",
-      answerLabel: "Answer:",
+      submittedEvidence: "Submitted Evidence:",
+      answerLabel: "Note:",
     },
   }[locale === "id" ? "id" : "en"];
 
@@ -226,42 +229,15 @@ export default function CompliancePage() {
   return (
     <DashboardLayout>
       <div className="w-full flex flex-col gap-8">
-        {/* Header Title */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-farm-border/60 pb-5 gap-4">
-          <div>
-            <h1 className="font-serif text-3xl font-bold text-farm-text">{labels.title}</h1>
-            <p className="text-sm text-farm-text-light mt-1 font-light">{labels.subtitle}</p>
-          </div>
-
-          {/* Quick Overall stats */}
-          <div className="bg-white border border-farm-border/80 rounded-xl p-4 flex items-center gap-4 shadow-sm w-fit shrink-0">
-            <div className="relative h-14 w-14 flex items-center justify-center shrink-0">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle cx="28" cy="28" r="24" stroke="#E8F3EC" strokeWidth="5" fill="transparent" />
-                <circle
-                  cx="28"
-                  cy="28"
-                  r="24"
-                  stroke="#1E5E3A"
-                  strokeWidth="5"
-                  fill="transparent"
-                  strokeDasharray={2 * Math.PI * 24}
-                  strokeDashoffset={2 * Math.PI * 24 * (1 - overallComplianceProgress / 100)}
-                  className="transition-all duration-500"
-                />
-              </svg>
-              <span className="absolute text-[11px] font-extrabold text-farm-text">{overallComplianceProgress}%</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-farm-gold uppercase tracking-wider block">
-                {labels.overallProgress}
-              </span>
-              <span className="text-sm font-extrabold text-farm-text">
-                {pillars.filter(p => p.progress_percentage === 100).length} / {totalPillarsCount} Pillars Completed
-              </span>
-            </div>
-          </div>
-        </div>
+        
+        <LevelProgress 
+          title={labels.title}
+          subtitle={labels.subtitle}
+          progressPercentage={overallComplianceProgress}
+          completedAreas={pillars.filter(p => p.progress_percentage === 100).length}
+          totalAreas={totalPillarsCount}
+          levelName={overallComplianceProgress === 100 ? "Petani Ahli" : "Pekerja Keras"}
+        />
 
         {/* Banner Alert Messages */}
         {successMsg && (
@@ -277,49 +253,21 @@ export default function CompliancePage() {
           </div>
         )}
 
-        {/* Pillars Tab Selector */}
-        <div>
-          <h3 className="text-xs font-bold text-farm-text-light uppercase tracking-wider mb-3">
+        {/* Pillars Tab Selector -> Replaced with JourneyMap */}
+        <div className="bg-white border border-farm-border rounded-2xl shadow-sm overflow-hidden pt-6">
+          <h3 className="text-sm font-black text-farm-text-light uppercase tracking-wider px-8 mb-2 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+            </svg>
             {labels.selectPillar}
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {isLoadingPillars && pillars.length === 0 ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-16 rounded-xl bg-white border border-farm-border/60 animate-pulse" />
-              ))
-            ) : (
-              pillars.map((pillar) => {
-                const isSelected = selectedPillarId === pillar.id;
-                return (
-                  <button
-                    key={pillar.id}
-                    onClick={() => setSelectedPillarId(pillar.id)}
-                    className={`flex flex-col p-3 border rounded-xl text-left transition-all shadow-sm ${
-                      isSelected
-                        ? "border-farm-green bg-white ring-1 ring-farm-green"
-                        : "border border-farm-border bg-farm-cream hover:border-farm-green hover:bg-white"
-                    }`}
-                  >
-                    <span className="text-[10px] font-bold text-farm-gold uppercase tracking-wider block">
-                      Pilar {pillar.code}
-                    </span>
-                    <span className="text-xs font-bold text-farm-text truncate mt-0.5 w-full">
-                      {pillar.name}
-                    </span>
-                    <div className="w-full bg-farm-border/40 h-1.5 rounded-full mt-3 overflow-hidden">
-                      <div
-                        className="bg-farm-green h-full rounded-full transition-all duration-500"
-                        style={{ width: `${pillar.progress_percentage || 0}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] font-bold text-farm-text-light mt-1 text-right block w-full">
-                      {pillar.progress_percentage || 0}%
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
+          
+          <JourneyMap 
+            pillars={pillars}
+            selectedPillarId={selectedPillarId}
+            onSelectPillar={setSelectedPillarId}
+            isLoading={isLoadingPillars}
+          />
         </div>
 
         {/* Criteria & Sub-Indicators Accordion Section */}
@@ -358,28 +306,41 @@ export default function CompliancePage() {
                       {/* Accordion Trigger Header */}
                       <button
                         onClick={() => toggleCriteria(crit.id)}
-                        className="flex items-center justify-between p-5 text-left hover:bg-farm-cream/50 transition-colors w-full"
+                        className={`flex items-center justify-between p-5 text-left transition-colors w-full border-l-4 ${
+                          isExpanded ? "bg-[#FAF8F5] border-farm-gold" : "hover:bg-farm-cream/50 border-transparent"
+                        }`}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 min-w-0">
-                          <span className="font-serif font-extrabold text-sm text-farm-green bg-farm-green-light px-2.5 py-1 rounded-md shrink-0">
-                            {crit.code}
-                          </span>
-                          <span className="font-semibold text-sm text-farm-text truncate">
-                            {crit.name}
-                          </span>
+                          <div className="w-10 h-10 rounded-xl bg-white border-2 border-farm-border flex items-center justify-center shrink-0 shadow-sm text-farm-gold">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 15.75h3.75M18 19.5a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08M15 4.05q-.298.026-.6.06c-.19.021-.38.042-.569.066M15 4.05V5.625c0 .828-.672 1.5-1.5 1.5h-3c-.828 0-1.5-.672-1.5-1.5V4.05M15 4.05q-1.353-.13-2.733-.13-1.38 0-2.733.13M8.831 3.522c.19-.024.38-.045.57-.066M9 4.05v1.575c0 .828.672 1.5 1.5 1.5h3c.828 0 1.5-.672 1.5-1.5V4.05M8.831 3.522q.298-.035.6-.06M9 4.05q-1.353-.13-2.733-.13-1.38 0-2.733.13" />
+                            </svg>
+                          </div>
+                          <div>
+                            <span className="font-bold text-xs text-farm-gold uppercase tracking-widest block mb-0.5">
+                              Kelompok Tugas {crit.code}
+                            </span>
+                            <span className="font-serif font-bold text-base text-farm-text truncate block">
+                              {crit.name}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-4 shrink-0 ml-2">
-                          <span className={`text-[11px] font-bold ${progressColor}`}>
-                            {crit.completed_sub_indicators} / {crit.total_sub_indicators} Selesai
+                        <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                            crit.completed_sub_indicators === crit.total_sub_indicators 
+                              ? "bg-farm-green text-white" 
+                              : "bg-farm-cream border border-farm-border text-farm-text"
+                          }`}>
+                            {crit.completed_sub_indicators} / {crit.total_sub_indicators} Tugas
                           </span>
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
                             viewBox="0 0 24 24"
-                            strokeWidth={2.5}
+                            strokeWidth={3}
                             stroke="currentColor"
-                            className={`w-4 h-4 text-farm-text-light transition-transform ${isExpanded ? "transform rotate-180" : ""}`}
+                            className={`w-4 h-4 text-farm-gold transition-transform duration-300 ${isExpanded ? "transform rotate-180" : ""}`}
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                           </svg>
@@ -406,28 +367,32 @@ export default function CompliancePage() {
                                   </div>
 
                                   {/* Status & Action Badge */}
-                                  <div className="flex items-center gap-3 shrink-0 ml-9 sm:ml-0">
+                                  <div className="flex items-center gap-3 shrink-0 ml-12 sm:ml-0">
                                     {sub.example_document_url && (
                                       <button
                                         onClick={() => {
                                           setPreviewDocUrl(sub.example_document_url);
                                           setPreviewDocTitle(`${labels.exampleDoc} - ${sub.code}`);
                                         }}
-                                        className="inline-flex h-7 items-center justify-center rounded-lg border border-farm-green px-3 text-[10px] font-semibold text-farm-green bg-white hover:bg-farm-green-light transition-colors"
+                                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border-2 border-farm-gold px-3 text-[10px] font-bold text-farm-gold bg-white hover:bg-farm-gold/10 transition-colors"
                                       >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.82 1.508-2.316a7.5 7.5 0 1 0-7.516 0c.85.496 1.508 1.333 1.508 2.316V18" />
+                                        </svg>
                                         {labels.viewExample}
                                       </button>
                                     )}
 
-                                    <span
-                                      className={`inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold ${
+                                    <div
+                                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${
                                         isSubmitted
-                                          ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
-                                          : "bg-zinc-100 border border-zinc-200 text-zinc-600"
+                                          ? "bg-farm-green text-white shadow-sm"
+                                          : "bg-white border-2 border-dashed border-farm-border text-farm-text-light"
                                       }`}
                                     >
+                                      {isSubmitted && <span className="text-white">✓</span>}
                                       {isSubmitted ? labels.statusCompleted : labels.statusNotStarted}
-                                    </span>
+                                    </div>
                                   </div>
                                 </div>
 
@@ -476,13 +441,14 @@ export default function CompliancePage() {
                                     {isSubmitted ? "Perbarui Bukti Kepatuhan" : "Kirim Bukti Kepatuhan"} →
                                   </button>
                                 ) : (
-                                  /* Form submission box */
-                                  <form
-                                    onSubmit={(e) => handleEvidenceSubmit(e, sub.id)}
-                                    className="ml-9 p-5 rounded-xl border border-farm-border bg-white space-y-4 shadow-sm"
-                                  >
-                                    <div className="flex justify-between items-center border-b border-farm-border pb-2">
-                                      <h4 className="text-xs font-bold text-farm-text uppercase tracking-wider">
+                                  /* Form submission modal */
+                                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                                    <form
+                                      onSubmit={(e) => handleEvidenceSubmit(e, sub.id)}
+                                      className="w-full max-w-lg p-6 rounded-2xl border border-farm-border bg-white space-y-5 shadow-2xl relative"
+                                    >
+                                      <div className="flex justify-between items-center border-b border-farm-border pb-3">
+                                        <h4 className="text-sm font-bold text-farm-text uppercase tracking-wider">
                                         {labels.uploadEvidence} ({sub.code})
                                       </h4>
                                       <button
@@ -579,6 +545,7 @@ export default function CompliancePage() {
                                       </button>
                                     </div>
                                   </form>
+                                  </div>
                                 )}
                               </div>
                             );

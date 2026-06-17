@@ -723,6 +723,11 @@ export default function Dashboard() {
                 desc: isId ? "Moderasi post komunitas" : "Moderate community posts",
                 href: "/admin/forum",
               },
+              {
+                title: isId ? "Chatbot" : "Chatbot",
+                desc: isId ? "Atur jawaban otomatis dan WhatsApp" : "Manage auto replies and WhatsApp fallback",
+                href: "/admin/chatbot",
+              },
             ].map((link, idx) => (
               <Link
                 key={idx}

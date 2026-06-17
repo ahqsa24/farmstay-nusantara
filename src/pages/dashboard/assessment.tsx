@@ -11,6 +11,10 @@ import {
   AssessmentScore,
 } from "@/types/assessment";
 
+import JourneyMap from "@/components/gamification/JourneyMap";
+import LevelProgress from "@/components/gamification/LevelProgress";
+import QuestCard from "@/components/gamification/QuestCard";
+
 export default function AssessmentPage() {
   const { user } = useAuth();
   const { t, locale } = useTranslation();
@@ -22,12 +26,14 @@ export default function AssessmentPage() {
   
   // Navigation states
   const [activeCriteriaId, setActiveCriteriaId] = useState<number | null>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   
   // Scoring / Readiness state
   const [scoreData, setScoreData] = useState<AssessmentScore | null>(null);
   const [showScoreSummary, setShowScoreSummary] = useState(false);
 
   // UI States
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoadingPillars, setIsLoadingPillars] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isSaving, setIsSaving] = useState<Record<number, boolean>>({}); // Track question autosave per ID
@@ -37,46 +43,46 @@ export default function AssessmentPage() {
 
   const labels = {
     id: {
-      title: "Penilaian Mandiri Keberlanjutan",
-      subtitle: "Uji dan evaluasi praktek keberlanjutan akomodasi agrowisata Anda secara berkala",
-      selectPillar: "Pilih Pilar Penilaian:",
-      criteriaSidebar: "Navigasi Kriteria",
-      guideDoc: "Unduh Panduan Resmi",
-      guideHint: "Klik untuk membaca penjelasan lengkap",
-      autosaveText: "Jawaban disimpan otomatis",
-      savingText: "Menyimpan...",
-      savedText: "Tersimpan!",
-      submitBatchBtn: "Kirim Evaluasi & Lihat Skor Kelayakan",
-      viewScoreBtn: "Lihat Ringkasan Hasil Skor",
-      backToForm: "Kembali ke Pertanyaan",
-      readinessTitle: "Tingkat Kelayakan Sertifikasi",
-      scoreTitle: "Detail Perolehan Nilai",
-      totalScore: "Total Skor",
-      maxScore: "Skor Maksimal",
-      readinessLevel: "Tingkat Kesiapan",
-      completedPillarText: "Pertanyaan Terisi",
-      assessmentInfoText: "Pastikan Anda menjawab seluruh kriteria untuk mendapatkan analisis tingkat kesiapan akomodasi yang akurat.",
+      title: "Petualangan Sertifikasi Agrowisata",
+      subtitle: "Jelajahi area pertanian Anda dan kumpulkan hasil panen berupa poin keberlanjutan",
+      selectPillar: "Peta Perjalanan",
+      criteriaSidebar: "Buku Catatan Quest",
+      guideDoc: "Peta Panduan",
+      guideHint: "Petunjuk Quest",
+      autosaveText: "Progress tercatat",
+      savingText: "Mencatat...",
+      savedText: "Tercatat!",
+      submitBatchBtn: "Selesaikan Area & Cek Level Pertanian",
+      viewScoreBtn: "Lihat Sertifikat Panen",
+      backToForm: "Kembali Bertualang",
+      readinessTitle: "Sertifikat Kelayakan Pertanian",
+      scoreTitle: "Rincian Hasil Panen",
+      totalScore: "Total Panen",
+      maxScore: "Panen Maksimal",
+      readinessLevel: "Level Pertanian",
+      completedPillarText: "Quest Selesai",
+      assessmentInfoText: "Pastikan Anda menyelesaikan seluruh quest di setiap area untuk membuka sertifikasi akurat.",
     },
     en: {
-      title: "Sustainability Self-Assessment",
-      subtitle: "Test and evaluate your agritourism accommodation sustainability practices",
-      selectPillar: "Select Assessment Pillar:",
-      criteriaSidebar: "Criteria Navigation",
-      guideDoc: "Download Official Guide",
-      guideHint: "Click to view detailed guidelines",
-      autosaveText: "Answers are saved automatically",
-      savingText: "Saving...",
-      savedText: "Saved!",
-      submitBatchBtn: "Submit Assessment & View Readiness Score",
-      viewScoreBtn: "View Score Summary",
-      backToForm: "Back to Questions",
-      readinessTitle: "Certification Readiness Level",
-      scoreTitle: "Score Distribution Details",
-      totalScore: "Total Score",
-      maxScore: "Max Score",
-      readinessLevel: "Readiness Level",
-      completedPillarText: "Filled Questions",
-      assessmentInfoText: "Make sure to answer all criteria questions to get an accurate evaluation of your sustainability readiness level.",
+      title: "Agritourism Certification Adventure",
+      subtitle: "Explore your farm areas and harvest sustainability points",
+      selectPillar: "Journey Map",
+      criteriaSidebar: "Quest Logbook",
+      guideDoc: "Guide Map",
+      guideHint: "Quest Hint",
+      autosaveText: "Progress recorded",
+      savingText: "Recording...",
+      savedText: "Recorded!",
+      submitBatchBtn: "Complete Area & Check Farm Level",
+      viewScoreBtn: "View Harvest Certificate",
+      backToForm: "Back to Adventure",
+      readinessTitle: "Farm Readiness Certificate",
+      scoreTitle: "Harvest Details",
+      totalScore: "Total Harvest",
+      maxScore: "Max Harvest",
+      readinessLevel: "Farm Level",
+      completedPillarText: "Completed Quests",
+      assessmentInfoText: "Make sure to complete all quests in every area to unlock accurate certification.",
     },
   }[locale === "id" ? "id" : "en"];
 
@@ -138,6 +144,10 @@ export default function AssessmentPage() {
       fetchQuestions(selectedPillarId);
     }
   }, [selectedPillarId]);
+
+  useEffect(() => {
+    setCurrentQuestionIndex(0);
+  }, [activeCriteriaId]);
 
   // Handle option click with Autosave trigger
   const handleOptionSelect = async (questionId: number, optionId: number) => {
@@ -223,6 +233,7 @@ export default function AssessmentPage() {
         if (scoreResponse.status === "success" && scoreResponse.data) {
           setScoreData(scoreResponse.data);
         }
+        setIsModalOpen(false); // Close modal on submit
         setShowScoreSummary(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
@@ -239,6 +250,12 @@ export default function AssessmentPage() {
   const activeCriteria = activePillarDetail?.criteria?.find(
     (crit) => crit.id === activeCriteriaId
   );
+
+  // Compute overall progress
+  const completedAreas = pillars.filter(p => p.score_percentage === 100 || (p.filled_questions === p.total_questions && p.total_questions !== undefined && p.total_questions > 0)).length;
+  const overallProgressPercent = pillars.length > 0 
+    ? Math.round(pillars.reduce((acc, p) => acc + (p.score_percentage !== undefined ? p.score_percentage : ((p.filled_questions || 0) / (p.total_questions || 1)) * 100), 0) / pillars.length)
+    : 0;
 
   return (
     <DashboardLayout>
@@ -274,8 +291,10 @@ export default function AssessmentPage() {
           /* READINESS SCORE SUMMARY DASHBOARD VIEW */
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
             {/* Score Ring Section (5 cols) */}
-            <div className="lg:col-span-5 bg-white border border-farm-border rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-sm">
-              <h3 className="font-serif text-lg font-bold text-farm-text mb-4">
+            <div className="lg:col-span-5 bg-white border border-farm-border rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-farm-gold via-farm-green to-farm-gold" />
+              
+              <h3 className="font-serif text-2xl font-bold text-farm-text mb-2 z-10">
                 {labels.readinessTitle}
               </h3>
               
@@ -379,52 +398,65 @@ export default function AssessmentPage() {
         ) : (
           /* SELF ASSESSMENT QUESTIONNAIRE VIEW */
           <div className="flex flex-col gap-6">
-            {/* Pillar Top Tab Selectors */}
-            <div>
-              <h3 className="text-xs font-bold text-farm-text-light uppercase tracking-wider mb-3">
+            
+            <LevelProgress 
+              title={locale === "id" ? "Level Perjalanan Anda" : "Your Journey Level"}
+              subtitle={locale === "id" ? "Selesaikan semua area untuk membuka sertifikasi." : "Complete all areas to unlock certification."}
+              progressPercentage={overallProgressPercent}
+              completedAreas={completedAreas}
+              totalAreas={pillars.length}
+              levelName={scoreData?.readiness_level || "Pemula"}
+            />
+
+            {/* Pillar Top Tab Selectors -> Replaced with JourneyMap */}
+            <div className="bg-white border border-farm-border rounded-2xl shadow-sm overflow-hidden pt-6">
+              <h3 className="text-sm font-black text-farm-text-light uppercase tracking-wider px-8 mb-2 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                </svg>
                 {labels.selectPillar}
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {isLoadingPillars && pillars.length === 0 ? (
-                  Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="h-16 rounded-xl bg-white border border-farm-border/60 animate-pulse" />
-                  ))
-                ) : (
-                  pillars.map((pillar) => {
-                    const isSelected = selectedPillarId === pillar.id;
-                    return (
-                      <button
-                        key={pillar.id}
-                        onClick={() => setSelectedPillarId(pillar.id)}
-                        className={`flex flex-col p-3 border-2 rounded-xl text-left transition-all shadow-sm ${
-                          isSelected
-                            ? "border-farm-green bg-white ring-1 ring-farm-green"
-                            : "border-farm-border bg-farm-cream hover:border-farm-green hover:bg-white"
-                        }`}
-                      >
-                        <span className="text-[10px] font-bold text-farm-gold uppercase tracking-wider block">
-                          Pilar {pillar.code}
-                        </span>
-                        <span className="text-xs font-bold text-farm-text truncate mt-0.5 w-full">
-                          {pillar.name}
-                        </span>
-                        <span className="text-[10px] text-farm-text-light mt-2 font-medium">
-                          {labels.completedPillarText}: {pillar.filled_questions} / {pillar.total_questions}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
+              
+              <JourneyMap 
+                pillars={pillars}
+                selectedPillarId={selectedPillarId}
+                onSelectPillar={(id) => {
+                  setSelectedPillarId(id);
+                  setIsModalOpen(true);
+                }}
+                isLoading={isLoadingPillars}
+              />
             </div>
 
-            {/* Main Questionnaire Split Panel */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              {/* Left Criteria Navigation Sidebar (3 cols) */}
-              <aside className="lg:col-span-3 bg-white border border-farm-border rounded-2xl p-5 shadow-sm h-fit space-y-4">
-                <h4 className="font-serif text-sm font-extrabold text-farm-text border-b border-farm-border pb-2">
-                  {labels.criteriaSidebar}
-                </h4>
+            {/* Main Questionnaire Split Panel - MODAL VIEW */}
+            {isModalOpen && (
+              <div className="fixed inset-0 z-50 flex justify-center items-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative">
+                  
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between p-4 border-b border-farm-border/60 bg-farm-cream">
+                    <h3 className="font-serif font-bold text-lg text-farm-text">
+                      {activePillarDetail ? activePillarDetail.name : "Memuat..."}
+                    </h3>
+                    <button
+                      onClick={() => setIsModalOpen(false)}
+                      className="text-farm-text-light hover:text-red-600 bg-white border border-farm-border px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                    >
+                      Tutup
+                    </button>
+                  </div>
+                  
+                  {/* Modal Body */}
+                  <div className="flex-1 overflow-y-auto p-6 bg-zinc-50">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                      {/* Left Criteria Navigation Sidebar (3 cols) */}
+                      <aside className="lg:col-span-3 bg-[#FAF8F5] border border-farm-border rounded-2xl p-5 shadow-inner h-fit space-y-4">
+                        <h4 className="font-serif text-base font-extrabold text-farm-text border-b border-farm-border/60 pb-3 flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                          </svg>
+                          {labels.criteriaSidebar}
+                        </h4>
 
                 {isLoadingDetail && !activePillarDetail ? (
                   <div className="space-y-2 py-4">
@@ -435,11 +467,11 @@ export default function AssessmentPage() {
                 ) : activePillarDetail?.criteria?.length === 0 ? (
                   <span className="text-xs text-farm-text-light font-light block">Tidak ada kriteria.</span>
                 ) : (
-                  <nav className="flex flex-col gap-1.5 max-h-[300px] lg:max-h-none overflow-y-auto">
+                  <nav className="flex flex-col gap-1.5 max-h-[300px] lg:max-h-none overflow-y-auto overflow-x-hidden pr-1">
                     {activePillarDetail?.criteria?.map((crit) => {
                       const isActive = activeCriteriaId === crit.id;
                       // Calculate answers count for this criteria
-                      const answeredCount = crit.questions?.filter((q) => q.user_answer_option_id !== null).length || 0;
+                      const answeredCount = crit.questions?.filter((q) => q.user_answer_option_id != null).length || 0;
                       const totalQuestions = crit.questions?.length || 0;
                       const isFinished = answeredCount === totalQuestions && totalQuestions > 0;
 
@@ -449,22 +481,22 @@ export default function AssessmentPage() {
                           onClick={() => setActiveCriteriaId(crit.id)}
                           className={`w-full flex items-center justify-between text-left px-3 h-10 rounded-lg text-xs font-semibold transition-all border ${
                             isActive
-                              ? "bg-farm-green border-farm-green text-white shadow-sm"
-                              : "border-transparent text-farm-text/80 hover:bg-farm-border/30 hover:text-farm-text"
-                          }`}
-                        >
-                          <span className="truncate pr-2">{crit.code} - {crit.name}</span>
-                          <span
-                            className={`shrink-0 text-[9px] px-1.5 py-0.5 rounded font-extrabold ${
-                              isActive
-                                ? "bg-white/20 text-white"
-                                : isFinished
-                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                : "bg-farm-border/40 text-farm-text-light"
+                                ? "bg-farm-green border-farm-green text-white shadow-md transform scale-105"
+                                : "border-transparent text-farm-text/80 hover:bg-white hover:border-farm-border/50 hover:shadow-sm"
                             }`}
                           >
-                            {answeredCount}/{totalQuestions}
-                          </span>
+                            <span className="truncate pr-2">{crit.code} - {crit.name}</span>
+                            <span
+                              className={`shrink-0 text-[10px] w-6 h-6 flex items-center justify-center rounded-full font-extrabold transition-colors ${
+                                isActive
+                                  ? "bg-white text-farm-green shadow-sm"
+                                  : isFinished
+                                  ? "bg-farm-gold text-white"
+                                  : "bg-farm-border/40 text-farm-text-light"
+                              }`}
+                            >
+                              {isFinished ? "✓" : totalQuestions - answeredCount}
+                            </span>
                         </button>
                       );
                     })}
@@ -504,91 +536,76 @@ export default function AssessmentPage() {
                       )}
                     </div>
 
-                    {/* Questions loop */}
-                    <div className="divide-y divide-farm-border/60">
-                      {activeCriteria.questions?.length === 0 ? (
+                    {/* Questions loop - Pagination View */}
+                    <div className="space-y-4 min-h-[250px]">
+                      {(!activeCriteria.questions || activeCriteria.questions.length === 0) ? (
                         <div className="py-10 text-center text-sm text-farm-text-light">
-                          Tidak ada pertanyaan di kriteria ini.
+                          Tidak ada quest di area ini.
                         </div>
                       ) : (
-                        activeCriteria.questions?.map((q, idx) => {
-                          const isSavingThis = !!isSaving[q.id];
-                          const isSavedThis = !!saveSuccess[q.id];
+                        (() => {
+                          const currentQuestion = activeCriteria.questions[currentQuestionIndex];
+                          if (!currentQuestion) return null;
+                          
+                          const isSavingThis = !!isSaving[currentQuestion.id];
+                          const isSavedThis = !!saveSuccess[currentQuestion.id];
                           
                           return (
-                            <div key={q.id} className={`py-6 ${idx === 0 ? "pt-0" : ""}`}>
-                              {/* Question description */}
-                              <div className="flex flex-col gap-1 mb-3.5">
-                                <div className="flex items-start justify-between gap-4">
-                                  <h5 className="font-semibold text-sm text-farm-text leading-snug">
-                                    {idx + 1}. {q.question_text}
-                                  </h5>
-
-                                  {/* Autosave status text */}
-                                  <div className="shrink-0 flex items-center text-[10px] font-bold h-5 select-none">
-                                    {isSavingThis && (
-                                      <span className="text-farm-gold animate-pulse">● {labels.savingText}</span>
-                                    )}
-                                    {isSavedThis && (
-                                      <span className="text-emerald-600">✓ {labels.savedText}</span>
-                                    )}
-                                    {!isSavingThis && !isSavedThis && q.user_answer_option_id !== null && (
-                                      <span className="text-farm-text-light font-light text-[9px] uppercase tracking-wider">{labels.autosaveText}</span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {q.guide_text && (
-                                  <p className="text-[11px] text-farm-text-light italic bg-zinc-50 border border-zinc-100 rounded-lg p-2.5 mt-1 leading-relaxed">
-                                    <span className="font-semibold text-[10px] text-farm-gold not-italic block uppercase tracking-wider mb-0.5">{labels.guideHint}:</span>
-                                    {q.guide_text}
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Multiple choice options */}
-                              <div className="grid grid-cols-1 gap-2.5">
-                                {q.options?.map((opt) => {
-                                  const isChecked = q.user_answer_option_id === opt.id;
-                                  return (
-                                    <button
-                                      type="button"
-                                      key={opt.id}
-                                      onClick={() => handleOptionSelect(q.id, opt.id)}
-                                      className={`flex items-center text-left p-3.5 border rounded-xl transition-all ${
-                                        isChecked
-                                          ? "border-farm-green bg-farm-green-light/25 font-bold"
-                                          : "border border-farm-border bg-farm-cream hover:border-farm-green hover:bg-white"
-                                      }`}
-                                    >
-                                      {/* Custom Radio Circle */}
-                                      <div className={`h-4.5 w-4.5 rounded-full border-2 shrink-0 flex items-center justify-center mr-3 transition-colors ${
-                                        isChecked ? "border-farm-green" : "border-farm-border"
-                                      }`}>
-                                        {isChecked && (
-                                          <div className="h-2 w-2 rounded-full bg-farm-green" />
-                                        )}
-                                      </div>
-                                      <span className="text-xs text-farm-text leading-snug">{opt.label}</span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
+                            <QuestCard 
+                              key={currentQuestion.id}
+                              index={currentQuestionIndex}
+                              questionId={currentQuestion.id}
+                              questionText={currentQuestion.question_text}
+                              guideText={currentQuestion.guide_text}
+                              options={currentQuestion.options || []}
+                              selectedOptionId={currentQuestion.user_answer_option_id}
+                              isSaving={isSavingThis}
+                              isSaved={isSavedThis}
+                              onSelectOption={handleOptionSelect}
+                              labels={{
+                                savingText: labels.savingText,
+                                savedText: labels.savedText,
+                                autosaveText: labels.autosaveText,
+                                guideHint: labels.guideHint,
+                              }}
+                            />
                           );
-                        })
+                        })()
                       )}
                     </div>
 
-                    {/* Bottom Submit trigger */}
-                    <div className="pt-6 border-t border-farm-border flex justify-end">
+                    {/* Pagination Controls */}
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-farm-border">
                       <button
                         type="button"
-                        onClick={handleFinalSubmit}
-                        className="inline-flex h-11 items-center justify-center rounded-lg bg-farm-green px-6 text-xs font-semibold text-white hover:bg-farm-green-hover shadow transition-colors"
+                        onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                        disabled={currentQuestionIndex === 0}
+                        className="px-4 py-2 text-sm font-semibold text-farm-text border border-farm-border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-farm-cream transition-colors"
                       >
-                        {labels.submitBatchBtn}
+                        Sebelumnya
                       </button>
+                      <span className="text-xs font-bold text-farm-text-light bg-farm-cream px-3 py-1.5 rounded-md border border-farm-border/60">
+                        {activeCriteria.questions && activeCriteria.questions.length > 0 
+                          ? `${currentQuestionIndex + 1} / ${activeCriteria.questions.length}` 
+                          : "0 / 0"}
+                      </span>
+                      {currentQuestionIndex === (activeCriteria.questions?.length || 1) - 1 || !activeCriteria.questions || activeCriteria.questions.length === 0 ? (
+                        <button
+                          type="button"
+                          onClick={handleFinalSubmit}
+                          className="px-6 py-2 text-sm font-bold text-white bg-farm-gold rounded-lg hover:bg-farm-gold-hover hover:-translate-y-1 hover:shadow-lg transition-all"
+                        >
+                          {labels.submitBatchBtn}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setCurrentQuestionIndex(prev => Math.min((activeCriteria.questions?.length || 1) - 1, prev + 1))}
+                          className="px-4 py-2 text-sm font-semibold text-white bg-farm-green border border-farm-green rounded-lg hover:bg-farm-green-hover transition-colors"
+                        >
+                          Selanjutnya
+                        </button>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -598,6 +615,10 @@ export default function AssessmentPage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    )}
           </div>
         )}
       </div>
